@@ -87,7 +87,20 @@ struct ShortcutDetailView: View {
                 Label(String(format: "%.1f (%d)", shortcut.rating, shortcut.ratingCount), systemImage: "star.fill")
                     .foregroundStyle(Color(hex: "#F0B100"))
                 Label(shortcut.author, systemImage: "person.fill")
-                Label(shortcut.saveCount.formatted(), systemImage: "bookmark")
+                Button {
+                    viewModel.toggleSaveShortcut(shortcutID: shortcut.id)
+                } label: {
+                    Label(
+                        shortcut.saveCount.formatted(),
+                        systemImage: shortcut.isSaved ? "heart.fill" : "heart"
+                    )
+                    .foregroundStyle(shortcut.isSaved ? Color(hex: "#FF5A1F") : Color.textSecondary)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(shortcut.isSaved ? "Unlike shortcut" : "Like shortcut")
+                .accessibilityValue("\(shortcut.saveCount.formatted()) likes")
+                .accessibilityAddTraits(shortcut.isSaved ? .isSelected : [])
             }
             .font(.system(size: 11, weight: .medium))
             .foregroundStyle(Color.textSecondary)

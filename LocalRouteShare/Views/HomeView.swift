@@ -6,8 +6,10 @@ struct HomeView: View {
     @State private var selectedTag = "All"
     @State private var homePath: [HomeDestination] = []
     @State private var isShowingSmartRoute = false
-
-    private let quickTags = ["Dorm", "Indoor"]
+    @State private var quickTags = ["Dorm", "Indoor"]
+    @State private var isAddingTag = false
+    @State private var draftTag = ""
+    @FocusState private var isTagFieldFocused: Bool
 
     private var popularShortcuts: [Shortcut] {
         Array(filteredShortcuts.sorted { $0.saveCount > $1.saveCount }.prefix(2))
@@ -37,14 +39,14 @@ struct HomeView: View {
                 VStack(spacing: 0) {
                     header
 
-                    VStack(spacing: 18) {
+                    VStack(spacing: 14) {
                         HomeSectionTitle(
                             systemImage: "mappin.circle",
                             color: Color(hex: "#16C784"),
                             title: "Best Shortcuts This Week"
                         )
 
-                        VStack(spacing: 14) {
+                        VStack(spacing: 12) {
                             ForEach(popularShortcuts) { shortcut in
                                 NavigationLink(value: HomeDestination.shortcut(shortcut.id)) {
                                     HomeShortcutSummaryCard(shortcut: shortcut)
@@ -54,7 +56,7 @@ struct HomeView: View {
                         }
 
                         Divider()
-                            .padding(.top, 20)
+                            .padding(.top, 14)
                             .padding(.horizontal, -20)
 
                         HomeSectionTitle(
@@ -72,11 +74,12 @@ struct HomeView: View {
                         }
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 18)
+                    .padding(.top, 14)
                     .padding(.bottom, 26)
                 }
             }
             .background(Color.backgroundGray.ignoresSafeArea())
+            .ignoresSafeArea(.container, edges: .top)
             .navigationDestination(for: HomeDestination.self) { destination in
                 switch destination {
                 case .shortcut(let shortcutID):
@@ -84,9 +87,6 @@ struct HomeView: View {
                         .environmentObject(viewModel)
                 case .routeRequest(let proposalID):
                     RouteRequestDetailView(proposalID: proposalID)
-                        .environmentObject(viewModel)
-                case .addShortcut:
-                    AddShortcutView(embedsInNavigationStack: false)
                         .environmentObject(viewModel)
                 }
             }
@@ -116,37 +116,38 @@ struct HomeView: View {
                     .interpolation(.high)
                     .antialiased(true)
                     .scaledToFit()
-                    .frame(width: 125, height: 145)
-                    .position(x: 72, y: 118)
-                    .shadow(color: Color.primaryPurple.opacity(0.20), radius: 10, x: 0, y: 8)
+                    .frame(width: 112, height: 126)
+                    .position(x: 84, y: 106)
+                    .shadow(color: Color.primaryPurple.opacity(0.16), radius: 7, x: 0, y: 5)
 
                 VStack(spacing: 0) {
                     Text("Top 5%\ncontributor!")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 17, weight: .heavy, design: .rounded))
                         .foregroundStyle(Color.white)
                         .multilineTextAlignment(.center)
                         .lineLimit(2)
-                        .frame(width: 99, height: 50)
+                        .minimumScaleFactor(0.84)
+                        .frame(width: 130, height: 58)
                         .background(
                             SpeechBubbleShape()
                                 .fill(Color.white.opacity(0.20))
                         )
                 }
-                .frame(width: 125, height: 85)
-                .rotationEffect(.degrees(5.2))
-                .position(x: min(width - 220, 193), y: 66)
+                .frame(width: 150, height: 80)
+                .rotationEffect(.degrees(4.0))
+                .position(x: min(width - 202, 242), y: 76)
 
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("My Local Score")
-                        .font(.system(size: 14))
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color(hex: "#DBEAFE"))
 
                     Text(viewModel.userProfile.localScore.formatted(.number.grouping(.automatic)))
                         .font(.system(size: 36, weight: .bold))
                         .foregroundStyle(Color.white)
                 }
-                .frame(width: 118, alignment: .trailing)
-                .position(x: width - 74, y: 68)
+                .frame(width: 132, alignment: .trailing)
+                .position(x: width - 82, y: 76)
 
                 HStack(spacing: 6) {
                     HomeStatPill(value: viewModel.userProfile.shortcutCount, title: "Routes")
@@ -154,7 +155,7 @@ struct HomeView: View {
                     HomeStatPill(value: viewModel.userProfile.receivedLikes, title: "Likes")
                 }
                 .frame(width: 264)
-                .position(x: width - 140, y: 156)
+                .position(x: width - 138, y: 150)
 
                 SearchBar(
                     text: $destinationQuery,
@@ -165,17 +166,29 @@ struct HomeView: View {
                     }
                 )
                     .frame(width: max(width - 32, 0), height: 52)
-                    .position(x: width / 2, y: 230)
+                    .position(x: width / 2, y: 214)
 
+                tagScroller
+                    .frame(width: max(width - 32, 0), height: 42)
+                    .position(x: width / 2, y: 264)
+            }
+        }
+        .frame(height: 294)
+    }
+
+    private var tagScroller: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(quickTags, id: \.self) { tag in
                         HashtagChip(title: tag, isSelected: selectedTag == tag) {
                             selectedTag = selectedTag == tag ? "All" : tag
                         }
+                        .id("tag-\(tag.lowercased())")
                     }
 
                     Button {
-                        homePath.append(.addShortcut)
+                        handleAddTagButton(proxy: proxy)
                     } label: {
                         Image(systemName: "plus")
                             .font(.subheadline.weight(.bold))
@@ -189,18 +202,87 @@ struct HomeView: View {
                             )
                     }
                     .buttonStyle(.plain)
+
+                    if isAddingTag {
+                        HStack(spacing: 0) {
+                            Text("#")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(Color.textSecondary)
+
+                            TextField("tag", text: $draftTag)
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(Color.textPrimary)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .focused($isTagFieldFocused)
+                                .submitLabel(.done)
+                                .onSubmit {
+                                    commitDraftTag(proxy: proxy)
+                                }
+                        }
+                        .padding(.horizontal, 12)
+                        .frame(width: 96, height: 34)
+                        .background(Color.white)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.borderGray, lineWidth: 1)
+                        )
+                        .transition(.opacity.combined(with: .scale(scale: 0.94, anchor: .leading)))
+                    }
                 }
-                .position(x: 104, y: 282)
+                .padding(.trailing, 16)
+                .frame(height: 42)
+            }
+            .animation(.spring(response: 0.26, dampingFraction: 0.86), value: isAddingTag)
+        }
+    }
+
+    private func handleAddTagButton(proxy: ScrollViewProxy) {
+        if isAddingTag {
+            commitDraftTag(proxy: proxy)
+        } else {
+            draftTag = ""
+            isAddingTag = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                isTagFieldFocused = true
             }
         }
-        .frame(height: 312)
+    }
+
+    private func commitDraftTag(proxy: ScrollViewProxy) {
+        let tag = draftTag
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "#"))
+
+        guard tag.isEmpty == false else {
+            isAddingTag = false
+            isTagFieldFocused = false
+            return
+        }
+
+        if quickTags.contains(where: { $0.localizedCaseInsensitiveCompare(tag) == .orderedSame }) == false {
+            quickTags.append(tag)
+        }
+
+        selectedTag = tag
+        draftTag = ""
+        isAddingTag = false
+        isTagFieldFocused = false
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.88)) {
+                if let firstTag = quickTags.first {
+                    proxy.scrollTo("tag-\(firstTag.lowercased())", anchor: .leading)
+                }
+            }
+        }
     }
 }
 
 private enum HomeDestination: Hashable {
     case shortcut(UUID)
     case routeRequest(UUID)
-    case addShortcut
 }
 
 private struct HomeStatPill: View {
@@ -227,27 +309,27 @@ private struct HomeShortcutSummaryCard: View {
     var shortcut: Shortcut
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(shortcut.homeSummaryTitle)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(Color.textPrimary)
                 .lineLimit(1)
 
             HStack(spacing: 8) {
                 Circle()
                     .fill(Color(hex: "#D1D5DB"))
-                    .frame(width: 20, height: 20)
+                    .frame(width: 18, height: 18)
 
                 Text(shortcut.homeSummaryAuthor)
-                    .font(.system(size: 11))
+                    .font(.system(size: 10))
                     .foregroundStyle(Color.textSecondary)
 
                 Image(systemName: "star.fill")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(Color(hex: "#F0B100"))
 
                 Text(String(format: "%.1f", shortcut.rating))
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(Color.textPrimary)
             }
 
@@ -259,23 +341,23 @@ private struct HomeShortcutSummaryCard: View {
 
                 Label("\(shortcut.saveCount.formatted()) likes", systemImage: "hand.thumbsup")
             }
-            .font(.system(size: 10))
+            .font(.system(size: 9))
             .foregroundStyle(Color.textSecondary)
 
             HStack(spacing: 8) {
                 ForEach(shortcut.homeSummaryTags, id: \.self) { tag in
                     Text("#\(tag)")
-                        .font(.system(size: 10))
+                        .font(.system(size: 9))
                         .foregroundStyle(Color.textSecondary)
                         .padding(.horizontal, 9)
-                        .frame(height: 22)
+                        .frame(height: 20)
                         .background(Color.lightGray)
                         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: 122)
+        .frame(height: 96)
         .padding(.horizontal, 14)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -308,42 +390,42 @@ private struct HomeRouteRequestMiniCard: View {
                             .lineLimit(1)
                             .truncationMode(.tail)
                     }
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                     Text(proposal.homeBadge)
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(Color(hex: "#F6339A"))
-                        .padding(.horizontal, 12)
-                        .frame(height: 24)
+                        .padding(.horizontal, 10)
+                        .frame(height: 22)
                         .background(Color(hex: "#FFE2E2"))
                         .clipShape(Capsule())
                 }
 
                 HStack(spacing: 12) {
                     Label("2,847", systemImage: "hand.thumbsup")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(Color.primaryPurple)
 
                     Label("156 supporters", systemImage: "person.2")
-                        .font(.system(size: 11))
+                        .font(.system(size: 10))
                         .foregroundStyle(Color.textSecondary)
 
                     Spacer(minLength: 4)
 
                     Text("Under Review")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(Color(hex: "#F59E0B"))
-                        .padding(.horizontal, 12)
-                        .frame(height: 24)
+                        .padding(.horizontal, 10)
+                        .frame(height: 22)
                         .background(Color(hex: "#FEF9C2"))
                         .clipShape(Capsule())
                 }
             }
             .padding(.horizontal, 16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(height: 78)
+            .frame(height: 70)
             .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(
@@ -364,11 +446,11 @@ private struct HomeSectionTitle: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: systemImage)
-                .font(.system(size: 23, weight: .semibold))
+                .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(color)
 
             Text(title)
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(Color.textPrimary)
 
             Spacer()

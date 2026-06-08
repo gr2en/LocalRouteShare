@@ -13,6 +13,7 @@ struct AddShortcutView: View {
     @State private var estimatedMinutes = "05"
     @State private var selectedTags: Set<String> = ["Raining"]
     @State private var isShowingRecording = false
+    @State private var isEnteringManually = false
     @State private var recordingResult = RouteRecordingResult.empty
 
     private let tagOptions = ["Raining", "Hot", "Cold", "Indoors", "Accessible"]
@@ -27,16 +28,20 @@ struct AddShortcutView: View {
     }
 
     private var isValid: Bool {
-        startPoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+        let hasRequiredRouteInput = hasRecording
+        || routeDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+
+        return startPoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
         && endPoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
-        && routeDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+        && hasRequiredRouteInput
     }
 
     private var submittedDescription: String {
         let trimmedDescription = routeDescription.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedTips = localTips.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmedTips.isEmpty == false else { return trimmedDescription }
-        return "\(trimmedDescription)\nTip: \(trimmedTips)"
+        let description = trimmedDescription.isEmpty ? "Recorded route with photo markers." : trimmedDescription
+        guard trimmedTips.isEmpty == false else { return description }
+        return "\(description)\nTip: \(trimmedTips)"
     }
 
     private var manualEstimatedTime: String {
@@ -68,13 +73,13 @@ struct AddShortcutView: View {
                     FormTextField(title: "To", placeholder: "e.g. Student Union Bldg.", text: $endPoint)
                 }
 
-                recordingCard
-
-                FormTextEditor(
-                    title: "Route Description",
-                    placeholder: "e.g. The 3rd-floor elevators are usually faster. The skybridge may be closed on weekends.",
-                    text: $routeDescription
-                )
+                if isEnteringManually {
+                    routeDescriptionEditor
+                        .transition(.opacity.combined(with: .move(edge: .trailing)))
+                } else {
+                    recordingCard
+                        .transition(.opacity.combined(with: .move(edge: .leading)))
+                }
 
                 FormTextEditor(
                     title: "Local Tips (Optional)",
@@ -166,13 +171,6 @@ struct AddShortcutView: View {
                     RecordingSummaryPill(icon: "timer", title: formattedDurationText(recordingResult.recordedDuration))
                     RecordingSummaryPill(icon: "camera.fill", title: "\(recordingResult.photoMarkers.count) photos")
                 }
-            } else {
-                HStack(spacing: 12) {
-                    Text("Don't want to take photos?")
-                    Button("Enter Manually") {}
-                }
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(Color.textSecondary)
             }
 
             Button {
@@ -187,6 +185,33 @@ struct AddShortcutView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
             }
             .buttonStyle(.plain)
+
+            if hasRecording == false {
+                HStack(spacing: 8) {
+                    Text("Don't want to take photos?")
+
+                    Button {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.88)) {
+                            isEnteringManually = true
+                        }
+                    } label: {
+                        Text("Enter Manually")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.textPrimary)
+                            .padding(.horizontal, 10)
+                            .frame(height: 24)
+                            .background(Color.white)
+                            .clipShape(Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.borderGray, lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(Color.textSecondary)
+            }
         }
         .padding(16)
         .background(Color.white)
@@ -196,6 +221,42 @@ struct AddShortcutView: View {
                 .stroke(Color.borderGray.opacity(0.85), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.035), radius: 10, y: 4)
+    }
+
+    private var routeDescriptionEditor: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            FormTextEditor(
+                title: "Route Description",
+                placeholder: "e.g. The 3rd-floor elevators are usually faster.\nThe skybridge may be closed on weekends.",
+                text: $routeDescription
+            )
+
+            HStack(spacing: 8) {
+                Text("Want to take photos?")
+
+                Button {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.88)) {
+                        isEnteringManually = false
+                    }
+                } label: {
+                    Text("Back to Record")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.textPrimary)
+                        .padding(.horizontal, 10)
+                        .frame(height: 24)
+                        .background(Color.white)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.borderGray, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(Color.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .center)
+        }
     }
 
     private var tagPicker: some View {

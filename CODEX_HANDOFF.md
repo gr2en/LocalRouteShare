@@ -142,6 +142,20 @@ xcodebuild -project LocalRouteShare.xcodeproj -scheme LocalRouteShare -configura
 
 2026-06-08 Shortcuts 탭의 각 route card 하단 하트/숫자를 실제 버튼으로 연결했습니다. 하트를 누르면 `isSaved`가 토글되어 `heart.fill`/`heart`와 주황/회색 상태가 바뀌고, `saveCount`도 `+1/-1`로 함께 변경됩니다. `AppViewModel.toggleSaveShortcut`은 수정된 `Shortcut` 값을 배열에 다시 대입하도록 바꿔 SwiftUI 갱신이 확실하게 일어나게 했습니다. 위 `xcodebuild` 명령으로 다시 확인했고 `BUILD SUCCEEDED`였습니다. iPhone 17 Pro 시뮬레이터에 설치 후 `-initialTab shortcuts`로 실행해 `/private/tmp/localroutes-shortcuts-heart-toggle.png` 캡처로 하트/숫자/Start 버튼 레이아웃을 확인했습니다.
 
+2026-06-08 `Route Detail` 상단 메타 줄의 기존 `bookmark + count` 표시를 `heart` 좋아요 버튼으로 교체했습니다. 이 버튼도 `AppViewModel.toggleSaveShortcut(shortcutID:)`를 사용하므로 선택 시 `heart.fill` + 주황색 + `saveCount +1`, 해제 시 빈 하트 + 회색 + `saveCount -1`로 바뀌며 Shortcuts 리스트와 같은 상태를 공유합니다. 위 `xcodebuild` 명령으로 다시 확인했고 `BUILD SUCCEEDED`였습니다.
+
+2026-06-08 Home 헤더 퀄리티 보정 작업을 했습니다. `RouteMascot`에 `route-mascot@2x.png`(584x654)와 `route-mascot@3x.png`(876x981)를 추가하고 asset catalog에 연결해 iPhone 3x 렌더링에서 캐릭터가 덜 흐리게 보이도록 했습니다. Home 말풍선은 더 크게 키우고 글자를 rounded/heavy 스타일로 조정해 `Top 5% contributor!`가 잘리지 않게 했으며, `My Local Score`와 점수는 기존보다 왼쪽으로 이동했습니다. Home의 `+` 버튼은 더 이상 `Register My Route`로 이동하지 않고, 같은 줄에 `#` 입력 칩을 띄워 사용자가 바로 새 해시태그를 입력할 수 있게 변경했습니다. 입력 후 return 또는 `+` 재탭으로 새 태그가 추가됩니다. 위 `xcodebuild` 명령으로 다시 확인했고 `BUILD SUCCEEDED`였습니다. iPhone 17 Pro 시뮬레이터 홈 캡처는 `/private/tmp/localroutes-home-header-tag.png`입니다.
+
+2026-06-08 Home 태그 row 추가 보정을 했습니다. `+`로 태그를 추가해도 첫 번째 `#Dorm` 칩이 잘리지 않도록 Home 전용 horizontal ScrollView의 이중 좌측 패딩을 제거했고, 새 태그 저장 후 첫 태그 id로 스크롤을 복귀시키도록 했습니다. `ScrollView(.horizontal)`은 유지해 태그가 많아지면 좌우 스크롤이 가능합니다. iOS 16.0에서 빌드가 깨지던 `scrollBounceBehavior` 사용은 제거했습니다. 위 `xcodebuild` 명령으로 다시 확인했고 `BUILD SUCCEEDED`였습니다. iPhone 17 Pro 시뮬레이터 홈 캡처는 `/private/tmp/localroutes-home-tag-scroll-final.png`입니다.
+
+2026-06-08 `Register My Route` 화면의 수동 입력 전환을 추가했습니다. 기본 상태에서는 `Ready to record` 카드가 보이고, 카드 하단의 `Enter Manually` 버튼을 누르면 같은 위치가 `Route Description` 입력칸으로 바뀝니다. 기존처럼 `Route Description`이 항상 아래에 중복 표시되던 구조는 제거했습니다. 등록 유효성은 사진 기록이 있거나 설명이 입력된 경우 통과하도록 조정했고, 사진 기록만 있는 경우에는 기본 설명 문구를 저장하도록 했습니다. 위 `xcodebuild` 명령으로 다시 확인했고 `BUILD SUCCEEDED`였습니다.
+
+2026-06-08 Figma `페이지 완성` 페이지 캡처(`/private/tmp/figma-page-complete.png`)와 비교해 Home 화면을 다시 보정했습니다. Home의 상단 흰 safe-area 여백을 제거해 그라데이션 헤더가 화면 최상단까지 깔리도록 했고, 헤더 높이/검색창/태그 위치를 더 컴팩트하게 조정했습니다. `Best Shortcuts This Week`와 `Trending Route Requests` 섹션의 제목, shortcut 카드, route request 카드의 폰트/높이/간격도 줄여 Figma처럼 한 화면에 더 많은 카드가 보이게 했습니다. 위 `xcodebuild` 명령으로 다시 확인했고 `BUILD SUCCEEDED`였습니다. iPhone 17 Pro 최종 Home 캡처는 `/private/tmp/localroutes-home-figma-final.png`입니다.
+
+2026-06-08 `Register My Route`의 `Enter Manually` 흐름에서 다시 사진 기록 카드로 돌아갈 수 있도록 `Back to Record` 버튼을 추가했습니다. 또한 route를 저장했는데 목록에서 안 뜨는 것처럼 보이던 문제를 보정했습니다. `My Routes` 카드가 기존 샘플 제목/작성자/설명/태그를 하드코딩해서 보여주던 부분을 실제 저장된 `Shortcut`의 title, author, routeDescription, tags로 표시하도록 바꿨고, shortcut 개수가 바뀌면 Shortcuts 탭의 검색어와 필터를 초기화해 새로 저장한 route가 필터 때문에 숨지 않게 했습니다. 위 `xcodebuild` 명령으로 다시 확인했고 `BUILD SUCCEEDED`였습니다.
+
+2026-06-08 Shortcuts 탭에서 `Best Shortcuts This Week`가 실제로 전체 목록을 보여주던 문제를 분리했습니다. `All / Best` 전환 컨트롤을 추가했고, 기본 `All Shortcuts`는 `viewModel.shortcuts` 배열 순서 그대로 표시해 새로 올라온 route가 최신순 맨 위에 보입니다. `Best Shortcuts This Week`는 같은 검색/태그 조건 안에서 `saveCount` 높은 순으로 정렬하고, 동률이면 rating, ratingCount 순으로 정렬합니다. route 개수가 바뀌면 검색어/태그/목록 모드를 `All`로 초기화해 새 저장 route를 바로 확인할 수 있게 했습니다. 위 `xcodebuild` 명령으로 다시 확인했고 `BUILD SUCCEEDED`였습니다.
+
 ## 새 노트북에서 이어가는 방법
 
 1. 이 폴더 전체를 새 노트북으로 옮깁니다.

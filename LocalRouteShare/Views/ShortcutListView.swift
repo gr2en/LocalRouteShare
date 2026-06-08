@@ -4,6 +4,7 @@ struct ShortcutListView: View {
     @EnvironmentObject private var viewModel: AppViewModel
     @State private var searchText = ""
     @State private var selectedTag = "All"
+    @State private var selectedListMode: ShortcutListMode = .all
     @State private var isShowingAddShortcut = false
     @State private var shortcutPath: [UUID] = []
 
@@ -31,6 +32,25 @@ struct ShortcutListView: View {
                 }
             }
             return matchesSearch && matchesTag
+        }
+    }
+
+    private var displayedShortcuts: [Shortcut] {
+        switch selectedListMode {
+        case .all:
+            return filteredShortcuts
+        case .best:
+            return filteredShortcuts.sorted { lhs, rhs in
+                if lhs.saveCount != rhs.saveCount {
+                    return lhs.saveCount > rhs.saveCount
+                }
+
+                if lhs.rating != rhs.rating {
+                    return lhs.rating > rhs.rating
+                }
+
+                return lhs.ratingCount > rhs.ratingCount
+            }
         }
     }
 
@@ -93,19 +113,21 @@ struct ShortcutListView: View {
                     }
                     .buttonStyle(.plain)
 
-                    HStack(spacing: 6) {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(Color(hex: "#F0B100"))
+                    ShortcutListModeControl(selectedMode: $selectedListMode)
 
-                        Text("Best Shortcuts This Week")
+                    HStack(spacing: 6) {
+                        Image(systemName: selectedListMode.iconName)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(selectedListMode.tintColor)
+
+                        Text(selectedListMode.title)
                             .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(Color.textPrimary)
                     }
                     .padding(.top, 2)
 
                     LazyVStack(spacing: 14) {
-                        ForEach(filteredShortcuts) { shortcut in
+                        ForEach(displayedShortcuts) { shortcut in
                             MyRouteShortcutCard(
                                 shortcut: shortcut,
                                 onStart: {
@@ -123,6 +145,11 @@ struct ShortcutListView: View {
             }
             .background(Color.backgroundGray.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
+            .onChange(of: viewModel.shortcuts.count) { _ in
+                searchText = ""
+                selectedTag = "All"
+                selectedListMode = .all
+            }
             .navigationDestination(for: UUID.self) { shortcutID in
                 ShortcutDetailView(shortcutID: shortcutID)
                     .environmentObject(viewModel)
@@ -132,6 +159,74 @@ struct ShortcutListView: View {
                     .environmentObject(viewModel)
             }
         }
+    }
+}
+
+private enum ShortcutListMode: String, CaseIterable, Identifiable {
+    case all = "All"
+    case best = "Best"
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .all:
+            return "All Shortcuts"
+        case .best:
+            return "Best Shortcuts This Week"
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .all:
+            return "clock.arrow.circlepath"
+        case .best:
+            return "star.fill"
+        }
+    }
+
+    var tintColor: Color {
+        switch self {
+        case .all:
+            return Color.textSecondary
+        case .best:
+            return Color(hex: "#F0B100")
+        }
+    }
+}
+
+private struct ShortcutListModeControl: View {
+    @Binding var selectedMode: ShortcutListMode
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(ShortcutListMode.allCases) { mode in
+                Button {
+                    withAnimation(.spring(response: 0.26, dampingFraction: 0.9)) {
+                        selectedMode = mode
+                    }
+                } label: {
+                    Text(mode.rawValue)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(selectedMode == mode ? Color.white : Color.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 34)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(selectedMode == mode ? Color.primaryPurple : Color.clear)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color.borderGray.opacity(0.95), lineWidth: 1)
+        )
     }
 }
 
@@ -155,7 +250,7 @@ private struct MyRouteShortcutCard: View {
                             .frame(width: 24, height: 24)
 
                         VStack(alignment: .leading, spacing: 1) {
-                            Text("Andrew Lee")
+                            Text(shortcut.author)
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundStyle(Color.textSecondary)
 
@@ -180,7 +275,7 @@ private struct MyRouteShortcutCard: View {
                 }
             }
 
-            Text("Student union bldg. 4th floor → Library → Eng...")
+            Text(shortcut.routeDescription)
                 .font(.system(size: 11))
                 .foregroundStyle(Color.textSecondary)
                 .lineLimit(1)
@@ -262,11 +357,17 @@ private struct ListMetric: View {
 
 private extension Shortcut {
     var myRoutesTitle: String {
-        "Muak Dorm → Eng. Hall"
+        if title.contains("→") || title.contains("->") {
+            return title
+                .replacingOccurrences(of: " -> ", with: " → ")
+                .replacingOccurrences(of: "->", with: "→")
+        }
+
+        return "\(startPoint) → \(endPoint)"
     }
 
     var myRoutesTags: [String] {
-        ["Raining", "Indoor", "Elevator"]
+        Array(tags.prefix(3))
     }
 
     var compactEstimatedTime: String {
