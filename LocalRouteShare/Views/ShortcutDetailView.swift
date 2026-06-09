@@ -24,7 +24,7 @@ struct ShortcutDetailView: View {
                         routeInfoSection(for: shortcut)
                         bestForSection(for: shortcut)
                         localTipsSection(for: shortcut)
-                        routeRatingSection
+                        routeRatingSection(for: shortcut)
                         saveButton(for: shortcut)
                         photoSection(for: shortcut)
                     }
@@ -149,19 +149,27 @@ struct ShortcutDetailView: View {
     }
 
     private func routeInfoSection(for shortcut: Shortcut) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let stops = shortcut.displayRouteStops
+
+        return VStack(alignment: .leading, spacing: 12) {
             Text("Full Route")
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
 
             VStack(spacing: 0) {
-                RouteEndpointRow(icon: "circle.fill", title: shortcut.startPoint, value: "1st floor", tint: .buttonBlue)
-                Divider()
-                    .padding(.leading, 44)
-                RouteEndpointRow(icon: "circle.fill", title: "Central Library", value: "2nd floor", tint: .primaryPurple)
-                Divider()
-                    .padding(.leading, 44)
-                RouteEndpointRow(icon: "mappin.circle.fill", title: shortcut.endPoint, value: "2nd floor", tint: .primaryPurple)
+                ForEach(Array(stops.enumerated()), id: \.element.id) { index, stop in
+                    RouteEndpointRow(
+                        icon: routeStopIcon(at: index, totalCount: stops.count),
+                        title: stop.title,
+                        value: stop.detail,
+                        tint: routeStopTint(at: index)
+                    )
+
+                    if index < stops.count - 1 {
+                        Divider()
+                            .padding(.leading, 44)
+                    }
+                }
             }
             .padding(.vertical, 6)
             .background(Color.white)
@@ -190,8 +198,10 @@ struct ShortcutDetailView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
@@ -210,8 +220,10 @@ struct ShortcutDetailView: View {
                 .font(.system(size: 12))
                 .foregroundStyle(Color.textSecondary)
                 .lineSpacing(3)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
@@ -220,7 +232,7 @@ struct ShortcutDetailView: View {
         )
     }
 
-    private var routeRatingSection: some View {
+    private func routeRatingSection(for shortcut: Shortcut) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("How Was This Route?")
                 .font(.system(size: 13, weight: .bold))
@@ -243,16 +255,28 @@ struct ShortcutDetailView: View {
                     .background(Color.lightGray)
                     .clipShape(Capsule())
             }
+            .frame(maxWidth: .infinity, alignment: .center)
 
             HStack(spacing: 16) {
-                ForEach(0..<5, id: \.self) { _ in
-                    Image(systemName: "star")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(Color.textSecondary.opacity(0.55))
+                ForEach(1...5, id: \.self) { score in
+                    Button {
+                        viewModel.rateShortcut(shortcutID: shortcut.id, score: score)
+                    } label: {
+                        Image(systemName: score <= (shortcut.userRating ?? 0) ? "star.fill" : "star")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundStyle(score <= (shortcut.userRating ?? 0) ? Color(hex: "#F0B100") : Color.textSecondary.opacity(0.55))
+                            .frame(width: 30, height: 30)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(score) star rating")
+                    .accessibilityAddTraits(score <= (shortcut.userRating ?? 0) ? .isSelected : [])
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .center)
         }
         .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
@@ -310,6 +334,14 @@ struct ShortcutDetailView: View {
 
     private func hasMapContent(_ shortcut: Shortcut) -> Bool {
         shortcut.routePoints.isEmpty == false || shortcut.photoMarkers.isEmpty == false
+    }
+
+    private func routeStopIcon(at index: Int, totalCount: Int) -> String {
+        index == totalCount - 1 ? "mappin.circle.fill" : "circle.fill"
+    }
+
+    private func routeStopTint(at index: Int) -> Color {
+        index == 0 ? .buttonBlue : .primaryPurple
     }
 
     private func canManage(_ shortcut: Shortcut) -> Bool {

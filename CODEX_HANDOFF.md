@@ -156,6 +156,16 @@ xcodebuild -project LocalRouteShare.xcodeproj -scheme LocalRouteShare -configura
 
 2026-06-08 Shortcuts 탭에서 `Best Shortcuts This Week`가 실제로 전체 목록을 보여주던 문제를 분리했습니다. `All / Best` 전환 컨트롤을 추가했고, 기본 `All Shortcuts`는 `viewModel.shortcuts` 배열 순서 그대로 표시해 새로 올라온 route가 최신순 맨 위에 보입니다. `Best Shortcuts This Week`는 같은 검색/태그 조건 안에서 `saveCount` 높은 순으로 정렬하고, 동률이면 rating, ratingCount 순으로 정렬합니다. route 개수가 바뀌면 검색어/태그/목록 모드를 `All`로 초기화해 새 저장 route를 바로 확인할 수 있게 했습니다. 위 `xcodebuild` 명령으로 다시 확인했고 `BUILD SUCCEEDED`였습니다.
 
+2026-06-08 Home 화면에서 Dynamic Island와 헤더 콘텐츠가 가까워 보이는 문제를 줄이기 위해 Home 헤더 내부 요소만 16pt 아래로 내렸습니다. 그라데이션 배경은 계속 화면 최상단까지 깔리고, 캐릭터/말풍선/Local Score/통계/Search/태그 row만 함께 내려가도록 `headerContentOffset`을 추가했습니다. 헤더 높이는 294에서 310으로 늘려 아래 여백이 유지되게 했습니다. 위 `xcodebuild` 명령으로 다시 확인했고 `BUILD SUCCEEDED`였습니다.
+
+2026-06-08 `Route Detail > Full Route`의 중간 경유지가 `Central Library`로 하드코딩되어 새로 저장한 route들도 같은 경유지처럼 보이던 문제를 고쳤습니다. 표시용 모델 `RouteStop`을 추가하고 Xcode project Sources에 연결했습니다. `Register My Route`와 `Edit Shortcut`에 `Full Route` 입력 섹션을 추가해 Start Detail, Via(Optional), Via Detail, Destination Detail을 직접 입력/수정할 수 있게 했고, `ShortcutDetailView`는 `shortcut.displayRouteStops`를 렌더링하도록 바꿨습니다. 이번 수정 직후 `xcodebuild`는 Codex 사용량 제한으로 승인 거절되어 실행하지 못했습니다. 대신 `plutil -lint LocalRouteShare.xcodeproj/project.pbxproj`와 `git diff --check`는 통과했습니다. 제한이 풀리면 위 빌드 명령을 다시 실행해야 합니다.
+
+2026-06-08 `Register My Route`의 `Full Route Details` 입력 영역을 `Ready to record`/수동 description 블록 아래로 이동했고, 토글 카드 형태로 변경했습니다. 기본 상태에서는 `Start Detail`과 `Destination Detail`만 보이고, `Add Via`를 누르면 `Via`와 `Via Detail` 입력칸이 나타납니다. 다시 `Remove Via`로 숨기면 via 입력값도 초기화됩니다. `Edit Shortcut`도 같은 토글/Add Via 구조로 맞췄으며, 기존 shortcut에 via가 있으면 처음부터 via 입력칸이 보입니다. 위 `xcodebuild` 명령으로 다시 확인했고 `BUILD SUCCEEDED`였습니다.
+
+2026-06-08 Home 말풍선 안의 `Top 5% contributor!` 문구가 아래로 치우쳐 보여서, 말풍선 배경과 텍스트를 `ZStack`으로 분리하고 텍스트만 3pt 위로 올렸습니다. 말풍선 위치/크기는 그대로 유지했습니다. 위 `xcodebuild` 명령으로 다시 확인했고 `BUILD SUCCEEDED`였습니다.
+
+2026-06-08 Home 캐릭터를 살짝 왼쪽으로 이동했습니다(`x: 84 → 76`). 캐릭터를 탭하면 `MascotHeroView`가 눈 깜박임 레이어를 잠깐 표시하고, `mascotWobbleAngle`을 spring animation으로 `7.5 → -6 → 3.5 → 0` 순서로 바꿔 오뚜기처럼 흔들리도록 했습니다. 위 `xcodebuild` 명령으로 다시 확인했고 `BUILD SUCCEEDED`였습니다.
+
 ## 새 노트북에서 이어가는 방법
 
 1. 이 폴더 전체를 새 노트북으로 옮깁니다.

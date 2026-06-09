@@ -1,0 +1,44 @@
+# LocalRouteShare Feature Screenshots
+
+PPT에 바로 넣기 쉽도록 기능별 원본 화면과 세부 crop 이미지를 모은 세트입니다.
+
+01. `01_home_full.png` - Home full screen
+    - 앱 첫 화면 전체: 마스코트, Local Score, 검색, Best Shortcuts, route request 요약.
+02. `02_home_hero_score.png` - Home hero and score
+    - 마스코트와 Local Score를 통해 사용자 기여도를 첫 화면에서 강조.
+03. `03_home_search_tags.png` - Search and hashtag filter
+    - 목적지 검색과 상황별 해시태그 필터로 경로 탐색을 빠르게 시작.
+04. `04_home_best_shortcuts.png` - Best Shortcuts preview
+    - 홈에서 하트와 평점 기반 인기 경로를 바로 확인.
+05. `05_home_route_requests.png` - Trending Route Requests
+    - 셔틀·동선 개선 요청을 홈에서 노출해 투표 참여를 유도.
+06. `06_shortcuts_full.png` - Shortcuts full screen
+    - Shortcuts 탭 전체: 경로 검색, 태그, 등록 CTA, All/Best 리스트.
+07. `07_shortcuts_add_and_filter.png` - Add route CTA and filters
+    - 경로 등록 CTA와 태그 필터, All/Best 전환을 한 화면에 배치.
+08. `08_shortcuts_card_like_start.png` - Shortcut card actions
+    - 경로 카드에서 하트 수와 Start 버튼으로 저장/이동 시작 동작을 제공.
+09. `09_add_route_full.png` - Register My Route full screen
+    - 새 경로 등록 전체 화면: From/To, 기록 카드, 경로 세부 입력.
+10. `10_add_route_record_card.png` - Ready to record
+    - 사진을 찍으며 경로를 기록하거나 Enter Manually로 수동 입력 전환.
+11. `11_add_route_full_route_details.png` - Full Route Details
+    - Start Detail, Add Via, Destination Detail로 상세 경유 정보를 구조화.
+12. `12_route_detail_full.png` - Route Detail full screen
+    - 경로 상세 전체: 시간, 거리, 지도, Full Route, Best For 정보.
+13. `13_route_detail_map_metrics.png` - Metrics and map preview
+    - 평점, 작성자, 하트 수, 시간·거리 지표와 지도 경로를 함께 표시.
+14. `14_route_detail_full_route.png` - Full Route stop list
+    - 등록된 Start/Via/Destination 정보를 단계별 이동 순서로 표시.
+15. `15_vote_full.png` - Route Requests & Voting full screen
+    - 신규 경로 제안과 투표 목록을 통해 개선 수요를 수집.
+16. `16_vote_first_proposal.png` - Voting proposal card
+    - 제안 카드에 상태, 예상 시간, 지지자 수, 투표 버튼을 표시.
+17. `17_vote_status_variants.png` - Request status variants
+    - Under Review, Voting, In Service 등 운영 단계별 상태를 비교.
+18. `18_profile_full.png` - Profile full screen
+    - 프로필 전체: Local Score, My Activity, 저장 경로, 업적 영역.
+19. `19_profile_score_header.png` - Profile score header
+    - 사용자의 레벨, 학교, Local Score, 주간 증가량을 한 번에 요약.
+20. `20_profile_activity_saved.png` - Activity and saved routes
+    - Saves, Routes Shared, Routes Voted 및 저장한 경로 목록을 관리.

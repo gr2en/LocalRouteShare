@@ -43,6 +43,7 @@
 		C00000000000000000000022 /* ShortcutDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000022 /* ShortcutDetailView.swift */; };
 		C00000000000000000000023 /* EditShortcutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000023 /* EditShortcutView.swift */; };
 		C00000000000000000000024 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000024 /* Assets.xcassets */; };
+		C00000000000000000000025 /* RouteStop.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000025 /* RouteStop.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -83,6 +84,7 @@
 		B00000000000000000000022 /* ShortcutDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutDetailView.swift; sourceTree = "<group>"; };
 		B00000000000000000000023 /* EditShortcutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditShortcutView.swift; sourceTree = "<group>"; };
 		B00000000000000000000024 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B00000000000000000000025 /* RouteStop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteStop.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -135,6 +137,7 @@
 				B00000000000000000000004 /* RouteProposal.swift */,
 				B00000000000000000000005 /* UserProfile.swift */,
 				B00000000000000000000006 /* Badge.swift */,
+				B00000000000000000000025 /* RouteStop.swift */,
 				B0000000000000000000001B /* RoutePoint.swift */,
 				B0000000000000000000001C /* RoutePhotoMarker.swift */,
 				B0000000000000000000001D /* RouteRecordingResult.swift */,
@@ -307,6 +310,7 @@
 				C00000000000000000000021 /* RecordingMapView.swift in Sources */,
 				C00000000000000000000022 /* ShortcutDetailView.swift in Sources */,
 				C00000000000000000000023 /* EditShortcutView.swift in Sources */,
+				C00000000000000000000025 /* RouteStop.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

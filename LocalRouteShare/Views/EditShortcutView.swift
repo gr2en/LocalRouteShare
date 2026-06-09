@@ -8,21 +8,39 @@ struct EditShortcutView: View {
 
     @State private var startPoint: String
     @State private var endPoint: String
+    @State private var startDetail: String
+    @State private var viaPoint: String
+    @State private var viaDetail: String
+    @State private var endDetail: String
     @State private var routeDescription: String
-    @State private var estimatedTime: String
+    @State private var estimatedTimeValue: String
+    @State private var estimatedTimeUnit: EstimatedTimeUnit
     @State private var distance: String
     @State private var selectedTags: Set<String>
+    @State private var isRouteStopsExpanded = true
+    @State private var isShowingViaStop: Bool
 
     private let baseTagOptions = ["Outdoor", "Fast", "Rainy Day", "Commute", "Walk", "Photo Log", "Fewer Steps", "Scenic", "Indoor", "Elevator", "Step-free", "Morning"]
 
     init(shortcut: Shortcut) {
         self.shortcut = shortcut
+        let routeStops = shortcut.displayRouteStops
+        let startStop = routeStops.first
+        let endStop = routeStops.last
+        let viaStop = routeStops.count > 2 ? routeStops[1] : nil
         _startPoint = State(initialValue: shortcut.startPoint)
         _endPoint = State(initialValue: shortcut.endPoint)
+        _startDetail = State(initialValue: startStop?.detail ?? "Start")
+        _viaPoint = State(initialValue: viaStop?.title ?? "")
+        _viaDetail = State(initialValue: viaStop?.detail ?? "Stopover")
+        _endDetail = State(initialValue: endStop?.detail ?? "Destination")
         _routeDescription = State(initialValue: shortcut.routeDescription)
-        _estimatedTime = State(initialValue: shortcut.estimatedTime)
+        let parsedEstimatedTime = EstimatedTimeUnit.parsed(shortcut.estimatedTime)
+        _estimatedTimeValue = State(initialValue: parsedEstimatedTime.value)
+        _estimatedTimeUnit = State(initialValue: parsedEstimatedTime.unit)
         _distance = State(initialValue: shortcut.distance)
         _selectedTags = State(initialValue: Set(shortcut.tags))
+        _isShowingViaStop = State(initialValue: viaStop != nil)
     }
 
     private var tagOptions: [String] {
@@ -42,8 +60,29 @@ struct EditShortcutView: View {
         startPoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
         && endPoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
         && routeDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
-        && estimatedTime.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+        && estimatedTimeValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
         && distance.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+    }
+
+    private var submittedEstimatedTime: String {
+        EstimatedTimeUnit.formattedDuration(value: estimatedTimeValue, unit: estimatedTimeUnit)
+    }
+
+    private var submittedRouteStops: [RouteStop] {
+        let trimmedStart = startPoint.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedVia = viaPoint.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedEnd = endPoint.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        var stops = [
+            RouteStop(title: trimmedStart, detail: routeStopDetail(startDetail, fallback: "Start"))
+        ]
+
+        if isShowingViaStop, trimmedVia.isEmpty == false {
+            stops.append(RouteStop(title: trimmedVia, detail: routeStopDetail(viaDetail, fallback: "Stopover")))
+        }
+
+        stops.append(RouteStop(title: trimmedEnd, detail: routeStopDetail(endDetail, fallback: "Destination")))
+        return stops.filter { $0.title.isEmpty == false }
     }
 
     var body: some View {
@@ -60,10 +99,16 @@ struct EditShortcutView: View {
                         EditShortcutTextField(title: "Destination", placeholder: "e.g. Engineering Building", text: $endPoint)
                     }
 
+                    routeStopsEditor
+
                     EditShortcutTextEditor(title: "Local tip or description", placeholder: "Add helpful tips for walking this route", text: $routeDescription)
 
                     VStack(spacing: 14) {
-                        EditShortcutTextField(title: "Estimated Time", placeholder: "e.g. 5 min", text: $estimatedTime)
+                        EstimatedTimeInput(
+                            title: "Estimated Time",
+                            value: $estimatedTimeValue,
+                            unit: $estimatedTimeUnit
+                        )
                         EditShortcutTextField(title: "Distance", placeholder: "e.g. 410m", text: $distance)
                     }
 
@@ -90,8 +135,9 @@ struct EditShortcutView: View {
                             endPoint: endPoint,
                             routeDescription: routeDescription,
                             tags: parsedTags,
-                            estimatedTime: estimatedTime,
-                            distance: distance
+                            estimatedTime: submittedEstimatedTime,
+                            distance: distance,
+                            routeStops: submittedRouteStops
                         )
                         dismiss()
                     }
@@ -122,6 +168,92 @@ struct EditShortcutView: View {
                 }
             }
         }
+    }
+
+    private var routeStopsEditor: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.spring(response: 0.26, dampingFraction: 0.9)) {
+                    isRouteStopsExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Full Route Details")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Color.textPrimary)
+
+                        Text("Edit the rows shown on the Route Detail screen.")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color.textSecondary.opacity(0.82))
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color.textSecondary)
+                        .rotationEffect(.degrees(isRouteStopsExpanded ? 180 : 0))
+                }
+            }
+            .buttonStyle(.plain)
+
+            if isRouteStopsExpanded {
+                VStack(spacing: 12) {
+                    Divider()
+                        .padding(.vertical, 12)
+
+                    EditShortcutTextField(title: "Start Detail", placeholder: "e.g. 1st floor", text: $startDetail)
+
+                    if isShowingViaStop {
+                        EditShortcutTextField(title: "Via", placeholder: "e.g. Student Union Elevator", text: $viaPoint)
+                        EditShortcutTextField(title: "Via Detail", placeholder: "e.g. 4th floor", text: $viaDetail)
+
+                        Button {
+                            withAnimation(.spring(response: 0.26, dampingFraction: 0.9)) {
+                                isShowingViaStop = false
+                                viaPoint = ""
+                                viaDetail = "2nd floor"
+                            }
+                        } label: {
+                            Label("Remove Via", systemImage: "minus.circle")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(Color.textSecondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        Button {
+                            withAnimation(.spring(response: 0.26, dampingFraction: 0.9)) {
+                                isShowingViaStop = true
+                            }
+                        } label: {
+                            Label("Add Via", systemImage: "plus.circle.fill")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(Color.primaryPurple)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    EditShortcutTextField(title: "Destination Detail", placeholder: "e.g. 2nd floor", text: $endDetail)
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(16)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.borderGray.opacity(0.85), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.035), radius: 10, y: 4)
+    }
+
+    private func routeStopDetail(_ value: String, fallback: String) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? fallback : trimmed
     }
 }
 

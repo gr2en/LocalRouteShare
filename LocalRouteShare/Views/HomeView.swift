@@ -9,6 +9,8 @@ struct HomeView: View {
     @State private var quickTags = ["Dorm", "Indoor"]
     @State private var isAddingTag = false
     @State private var draftTag = ""
+    @State private var isMascotBlinking = false
+    @State private var mascotWobbleAngle = 0.0
     @FocusState private var isTagFieldFocused: Bool
 
     private var popularShortcuts: [Shortcut] {
@@ -99,6 +101,7 @@ struct HomeView: View {
     private var header: some View {
         GeometryReader { proxy in
             let width = proxy.size.width
+            let headerContentOffset: CGFloat = 16
 
             ZStack(alignment: .topLeading) {
                 LinearGradient(
@@ -110,32 +113,33 @@ struct HomeView: View {
                     endPoint: .bottomTrailing
                 )
 
-                Image("RouteMascot")
-                    .renderingMode(.original)
-                    .resizable()
-                    .interpolation(.high)
-                    .antialiased(true)
-                    .scaledToFit()
-                    .frame(width: 112, height: 126)
-                    .position(x: 84, y: 106)
-                    .shadow(color: Color.primaryPurple.opacity(0.16), radius: 7, x: 0, y: 5)
+                Button {
+                    playMascotTapAnimation()
+                } label: {
+                    MascotHeroView(isBlinking: isMascotBlinking)
+                }
+                .buttonStyle(.plain)
+                .rotationEffect(.degrees(mascotWobbleAngle), anchor: .bottom)
+                .position(x: 76, y: 106 + headerContentOffset)
+                .shadow(color: Color.primaryPurple.opacity(0.16), radius: 7, x: 0, y: 5)
 
-                VStack(spacing: 0) {
+                ZStack {
+                    SpeechBubbleShape()
+                        .fill(Color.white.opacity(0.20))
+                        .frame(width: 130, height: 58)
+
                     Text("Top 5%\ncontributor!")
                         .font(.system(size: 17, weight: .heavy, design: .rounded))
                         .foregroundStyle(Color.white)
                         .multilineTextAlignment(.center)
                         .lineLimit(2)
                         .minimumScaleFactor(0.84)
-                        .frame(width: 130, height: 58)
-                        .background(
-                            SpeechBubbleShape()
-                                .fill(Color.white.opacity(0.20))
-                        )
+                        .frame(width: 122, height: 46)
+                        .offset(y: -3)
                 }
                 .frame(width: 150, height: 80)
                 .rotationEffect(.degrees(4.0))
-                .position(x: min(width - 202, 242), y: 76)
+                .position(x: min(width - 202, 242), y: 76 + headerContentOffset)
 
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("My Local Score")
@@ -147,7 +151,7 @@ struct HomeView: View {
                         .foregroundStyle(Color.white)
                 }
                 .frame(width: 132, alignment: .trailing)
-                .position(x: width - 82, y: 76)
+                .position(x: width - 82, y: 76 + headerContentOffset)
 
                 HStack(spacing: 6) {
                     HomeStatPill(value: viewModel.userProfile.shortcutCount, title: "Routes")
@@ -155,7 +159,7 @@ struct HomeView: View {
                     HomeStatPill(value: viewModel.userProfile.receivedLikes, title: "Likes")
                 }
                 .frame(width: 264)
-                .position(x: width - 138, y: 150)
+                .position(x: width - 138, y: 150 + headerContentOffset)
 
                 SearchBar(
                     text: $destinationQuery,
@@ -166,14 +170,14 @@ struct HomeView: View {
                     }
                 )
                     .frame(width: max(width - 32, 0), height: 52)
-                    .position(x: width / 2, y: 214)
+                    .position(x: width / 2, y: 214 + headerContentOffset)
 
                 tagScroller
                     .frame(width: max(width - 32, 0), height: 42)
-                    .position(x: width / 2, y: 264)
+                    .position(x: width / 2, y: 264 + headerContentOffset)
             }
         }
-        .frame(height: 294)
+        .frame(height: 310)
     }
 
     private var tagScroller: some View {
@@ -278,11 +282,86 @@ struct HomeView: View {
             }
         }
     }
+
+    private func playMascotTapAnimation() {
+        withAnimation(.easeInOut(duration: 0.07)) {
+            isMascotBlinking = true
+        }
+
+        withAnimation(.interpolatingSpring(stiffness: 260, damping: 12)) {
+            mascotWobbleAngle = 7.5
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.11) {
+            withAnimation(.easeInOut(duration: 0.08)) {
+                isMascotBlinking = false
+            }
+
+            withAnimation(.interpolatingSpring(stiffness: 260, damping: 12)) {
+                mascotWobbleAngle = -6
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+            withAnimation(.interpolatingSpring(stiffness: 260, damping: 14)) {
+                mascotWobbleAngle = 3.5
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.34) {
+            withAnimation(.interpolatingSpring(stiffness: 220, damping: 16)) {
+                mascotWobbleAngle = 0
+            }
+        }
+    }
 }
 
 private enum HomeDestination: Hashable {
     case shortcut(UUID)
     case routeRequest(UUID)
+}
+
+private struct MascotHeroView: View {
+    var isBlinking: Bool
+
+    var body: some View {
+        ZStack {
+            Image("RouteMascot")
+                .renderingMode(.original)
+                .resizable()
+                .interpolation(.high)
+                .antialiased(true)
+                .scaledToFit()
+                .frame(width: 112, height: 126)
+
+            if isBlinking {
+                HStack(spacing: 12) {
+                    MascotBlinkEye()
+                    MascotBlinkEye()
+                }
+                .offset(x: -2, y: -4)
+                .transition(.opacity.combined(with: .scale(scale: 0.92)))
+            }
+        }
+        .frame(width: 112, height: 126)
+        .contentShape(Rectangle())
+        .accessibilityLabel("Route mascot")
+    }
+}
+
+private struct MascotBlinkEye: View {
+    var body: some View {
+        ZStack {
+            Capsule()
+                .fill(Color.white.opacity(0.96))
+                .frame(width: 20, height: 16)
+
+            Capsule()
+                .fill(Color(hex: "#1E3A8A"))
+                .frame(width: 18, height: 4)
+                .offset(y: 1)
+        }
+    }
 }
 
 private struct HomeStatPill: View {

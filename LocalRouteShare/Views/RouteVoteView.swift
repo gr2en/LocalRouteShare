@@ -144,6 +144,11 @@ private enum RouteFilter: CaseIterable {
 
 struct RouteRequestDetailView: View {
     @EnvironmentObject private var viewModel: AppViewModel
+    @State private var commentText = ""
+    @State private var studentComments = [
+        "This route would be really helpful on rainy days!",
+        "A shuttle here would make the commute much easier."
+    ]
 
     let proposalID: UUID
 
@@ -157,13 +162,14 @@ struct RouteRequestDetailView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 14) {
                         detailHeader(for: proposal)
-                        routeMap
+                        routeMap(for: proposal)
                         fullRouteSection(for: proposal)
                         detailSection(title: "Why Students Need This Route") {
                             Text(proposal.reason)
-                                .font(.system(size: 12))
+                                .font(.system(size: 13))
                                 .foregroundStyle(Color.textSecondary)
                                 .lineSpacing(3)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         commentsSection
                         benefitsSection(for: proposal)
@@ -199,12 +205,12 @@ struct RouteRequestDetailView: View {
                 Text(proposal.startPoint)
                     .lineLimit(1)
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 10, weight: .bold))
+                    .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(Color.textSecondary)
                 Text(proposal.detailEndPoint)
                     .lineLimit(1)
             }
-            .font(.system(size: 16, weight: .bold))
+            .font(.system(size: 18, weight: .bold))
             .foregroundStyle(Color.textPrimary)
 
             HStack(spacing: 12) {
@@ -212,102 +218,30 @@ struct RouteRequestDetailView: View {
                     .foregroundStyle(Color.primaryPurple)
                 Label("Andrew Lee", systemImage: "person.fill")
                 Text(proposal.status.displayText)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(proposal.status.detailBadgeTextColor)
                     .padding(.horizontal, 10)
                     .frame(height: 20)
                     .background(proposal.status.detailBadgeBackgroundColor)
                     .clipShape(Capsule())
             }
-            .font(.system(size: 11))
+            .font(.system(size: 12))
             .foregroundStyle(Color.textSecondary)
         }
     }
 
-    private var routeMap: some View {
-        GeometryReader { proxy in
-            let width = proxy.size.width
-            let height = proxy.size.height
-
-            ZStack {
-                LinearGradient(
-                    colors: [Color(hex: "#EAF4FF"), Color(hex: "#FFF5E8")],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Color(hex: "#DDEAF7").opacity(0.85))
-                    .frame(width: width * 0.58, height: height * 0.54)
-                    .rotationEffect(.degrees(-9))
-                    .position(x: width * 0.70, y: height * 0.40)
-
-                mapRoad(width: width * 1.18, height: 13, color: Color.white.opacity(0.92))
-                    .rotationEffect(.degrees(-8))
-                    .position(x: width * 0.48, y: height * 0.34)
-
-                mapRoad(width: width * 0.95, height: 10, color: Color.white.opacity(0.88))
-                    .rotationEffect(.degrees(17))
-                    .position(x: width * 0.54, y: height * 0.58)
-
-                mapRoad(width: width * 0.78, height: 8, color: Color(hex: "#F8C163").opacity(0.55))
-                    .rotationEffect(.degrees(-2))
-                    .position(x: width * 0.38, y: height * 0.22)
-
-                Path { path in
-                    path.move(to: CGPoint(x: width * 0.08, y: height * 0.65))
-                    path.addCurve(
-                        to: CGPoint(x: width * 0.52, y: height * 0.42),
-                        control1: CGPoint(x: width * 0.21, y: height * 0.43),
-                        control2: CGPoint(x: width * 0.38, y: height * 0.52)
-                    )
-                    path.addCurve(
-                        to: CGPoint(x: width * 0.92, y: height * 0.50),
-                        control1: CGPoint(x: width * 0.68, y: height * 0.28),
-                        control2: CGPoint(x: width * 0.78, y: height * 0.62)
-                    )
-                }
-                .stroke(Color.primaryPurple, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
-
-                ForEach(routePreviewStops(width: width, height: height), id: \.label) { stop in
-                    VStack(spacing: 3) {
-                        Circle()
-                            .fill(Color.primaryPurple)
-                            .frame(width: 9, height: 9)
-                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
-
-                        Text(stop.label)
-                            .font(.system(size: 8, weight: .semibold))
-                            .foregroundStyle(Color.textSecondary)
-                            .padding(.horizontal, 5)
-                            .frame(height: 16)
-                            .background(Color.white.opacity(0.88))
-                            .clipShape(Capsule())
-                    }
-                    .position(stop.point)
-                }
-            }
-        }
+    private func routeMap(for proposal: RouteProposal) -> some View {
+        RouteMapView(
+            routePoints: proposal.detailRoutePoints,
+            photoMarkers: proposal.detailMapMarkers,
+            currentLocation: nil
+        )
         .frame(height: 190)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(Color.borderGray, lineWidth: 1)
         )
-    }
-
-    private func mapRoad(width: CGFloat, height: CGFloat, color: Color) -> some View {
-        RoundedRectangle(cornerRadius: height / 2, style: .continuous)
-            .fill(color)
-            .frame(width: width, height: height)
-    }
-
-    private func routePreviewStops(width: CGFloat, height: CGFloat) -> [RoutePreviewStop] {
-        [
-            RoutePreviewStop(label: "Main Gate", point: CGPoint(x: width * 0.08, y: height * 0.65)),
-            RoutePreviewStop(label: "Central Library", point: CGPoint(x: width * 0.52, y: height * 0.42)),
-            RoutePreviewStop(label: "Sinchon Stn.", point: CGPoint(x: width * 0.92, y: height * 0.50))
-        ]
     }
 
     private func fullRouteSection(for proposal: RouteProposal) -> some View {
@@ -323,16 +257,26 @@ struct RouteRequestDetailView: View {
     private var commentsSection: some View {
         detailSection(title: "Student Comments") {
             VStack(spacing: 8) {
-                CommentBubble(text: "This route would be really helpful on rainy days!")
-                CommentBubble(text: "This route would be really helpful on rainy days!")
+                ForEach(Array(studentComments.enumerated()), id: \.offset) { _, comment in
+                    CommentBubble(text: comment)
+                }
 
                 HStack {
-                    Text("Send your comments")
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.textSecondary)
+                    TextField("Send your comments", text: $commentText)
+                        .font(.system(size: 12))
+                        .textInputAutocapitalization(.sentences)
+                        .submitLabel(.send)
+                        .onSubmit(addComment)
+
                     Spacer()
-                    Image(systemName: "paperplane")
-                        .foregroundStyle(Color.textSecondary)
+
+                    Button(action: addComment) {
+                        Image(systemName: "paperplane.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.textSecondary : Color.primaryPurple)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
                 .padding(.horizontal, 12)
                 .frame(height: 34)
@@ -340,6 +284,14 @@ struct RouteRequestDetailView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
         }
+    }
+
+    private func addComment() {
+        let trimmedComment = commentText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedComment.isEmpty == false else { return }
+
+        studentComments.append(trimmedComment)
+        commentText = ""
     }
 
     private func benefitsSection(for proposal: RouteProposal) -> some View {
@@ -366,7 +318,7 @@ struct RouteRequestDetailView: View {
 
     private func supportersSection(for proposal: RouteProposal) -> some View {
         Text("\(proposal.voteCount.formatted()) Supporters")
-            .font(.system(size: 13, weight: .bold))
+            .font(.system(size: 14, weight: .bold))
             .foregroundStyle(Color.textPrimary)
             .frame(maxWidth: .infinity)
             .frame(height: 42)
@@ -382,7 +334,7 @@ struct RouteRequestDetailView: View {
                 proposal.hasVoted ? "Voted(\(proposal.voteCount.formatted()))" : "Vote(\(proposal.voteCount.formatted()))",
                 systemImage: "hand.thumbsup"
             )
-            .font(.system(size: 13, weight: .bold))
+            .font(.system(size: 14, weight: .bold))
             .foregroundStyle(proposal.status == .voting && proposal.hasVoted == false ? Color.white : Color.textSecondary)
             .frame(maxWidth: .infinity)
             .frame(height: 48)
@@ -396,12 +348,13 @@ struct RouteRequestDetailView: View {
     private func detailSection<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.system(size: 13, weight: .bold))
+                .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
 
             content()
         }
         .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
@@ -409,11 +362,6 @@ struct RouteRequestDetailView: View {
                 .stroke(Color.borderGray, lineWidth: 1)
         )
     }
-}
-
-private struct RoutePreviewStop {
-    let label: String
-    let point: CGPoint
 }
 
 private struct RequestTimelineRow: View {
@@ -429,10 +377,10 @@ private struct RequestTimelineRow: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.textPrimary)
                 Text(subtitle)
-                    .font(.system(size: 10))
+                    .font(.system(size: 11))
                     .foregroundStyle(Color.textSecondary)
             }
         }
@@ -444,7 +392,7 @@ private struct CommentBubble: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 11))
+            .font(.system(size: 12))
             .foregroundStyle(Color.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
@@ -458,7 +406,7 @@ private struct BenefitRow: View {
 
     var body: some View {
         Label(text, systemImage: "checkmark.circle")
-            .font(.system(size: 11))
+            .font(.system(size: 12))
             .foregroundStyle(Color.textSecondary)
     }
 }
@@ -469,7 +417,7 @@ private struct StatusProgressRow: View {
 
     var body: some View {
         Label(title, systemImage: isDone ? "checkmark.circle.fill" : "circle")
-            .font(.system(size: 11))
+            .font(.system(size: 12))
             .foregroundStyle(isDone ? Color.primaryPurple : Color.textSecondary)
     }
 }
@@ -480,6 +428,45 @@ private extension RouteProposal {
             return "Sinchon Stn. Exit 3"
         }
         return endPoint
+    }
+
+    var detailRoutePoints: [RoutePoint] {
+        if startPoint.localizedCaseInsensitiveContains("Yonsei")
+            || endPoint.localizedCaseInsensitiveContains("Sinchon") {
+            return [
+                RoutePoint(latitude: 37.5659, longitude: 126.9380),
+                RoutePoint(latitude: 37.5651, longitude: 126.9389),
+                RoutePoint(latitude: 37.5645, longitude: 126.9403),
+                RoutePoint(latitude: 37.5639, longitude: 126.9418),
+                RoutePoint(latitude: 37.5632, longitude: 126.9436),
+                RoutePoint(latitude: 37.5627, longitude: 126.9453)
+            ]
+        }
+
+        return [
+            RoutePoint(latitude: 37.5667, longitude: 126.9358),
+            RoutePoint(latitude: 37.5661, longitude: 126.9366),
+            RoutePoint(latitude: 37.5655, longitude: 126.9375)
+        ]
+    }
+
+    var detailMapMarkers: [RoutePhotoMarker] {
+        guard detailRoutePoints.isEmpty == false else { return [] }
+
+        return [
+            RoutePhotoMarker(
+                latitude: detailRoutePoints.first?.latitude ?? 37.5659,
+                longitude: detailRoutePoints.first?.longitude ?? 126.9380,
+                imageData: nil,
+                memo: startPoint
+            ),
+            RoutePhotoMarker(
+                latitude: detailRoutePoints.last?.latitude ?? 37.5627,
+                longitude: detailRoutePoints.last?.longitude ?? 126.9453,
+                imageData: nil,
+                memo: detailEndPoint
+            )
+        ]
     }
 
     var displayBenefits: [String] {

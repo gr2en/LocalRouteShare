@@ -8,12 +8,19 @@ struct AddShortcutView: View {
 
     @State private var startPoint = ""
     @State private var endPoint = ""
+    @State private var startDetail = "1st floor"
+    @State private var viaPoint = ""
+    @State private var viaDetail = "2nd floor"
+    @State private var endDetail = "2nd floor"
     @State private var routeDescription = ""
     @State private var localTips = ""
-    @State private var estimatedMinutes = "05"
+    @State private var estimatedTimeValue = "05"
+    @State private var estimatedTimeUnit: EstimatedTimeUnit = .minutes
     @State private var selectedTags: Set<String> = ["Raining"]
     @State private var isShowingRecording = false
     @State private var isEnteringManually = false
+    @State private var isRouteStopsExpanded = true
+    @State private var isShowingViaStop = false
     @State private var recordingResult = RouteRecordingResult.empty
 
     private let tagOptions = ["Raining", "Hot", "Cold", "Indoors", "Accessible"]
@@ -44,10 +51,25 @@ struct AddShortcutView: View {
         return "\(description)\nTip: \(trimmedTips)"
     }
 
+    private var submittedRouteStops: [RouteStop] {
+        let trimmedStart = startPoint.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedVia = viaPoint.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedEnd = endPoint.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        var stops = [
+            RouteStop(title: trimmedStart, detail: routeStopDetail(startDetail, fallback: "Start"))
+        ]
+
+        if isShowingViaStop, trimmedVia.isEmpty == false {
+            stops.append(RouteStop(title: trimmedVia, detail: routeStopDetail(viaDetail, fallback: "Stopover")))
+        }
+
+        stops.append(RouteStop(title: trimmedEnd, detail: routeStopDetail(endDetail, fallback: "Destination")))
+        return stops.filter { $0.title.isEmpty == false }
+    }
+
     private var manualEstimatedTime: String {
-        let trimmed = estimatedMinutes.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.isEmpty == false else { return "5 min" }
-        return trimmed.localizedCaseInsensitiveContains("min") ? trimmed : "\(trimmed) min"
+        EstimatedTimeUnit.formattedDuration(value: estimatedTimeValue, unit: estimatedTimeUnit)
     }
 
     init(embedsInNavigationStack: Bool = true) {
@@ -81,13 +103,19 @@ struct AddShortcutView: View {
                         .transition(.opacity.combined(with: .move(edge: .leading)))
                 }
 
+                routeStopsEditor
+
                 FormTextEditor(
                     title: "Local Tips (Optional)",
                     placeholder: "e.g. The skybridge may be closed on weekends.",
                     text: $localTips
                 )
 
-                FormTextField(title: "Estimated Time", placeholder: "05 min", text: $estimatedMinutes)
+                EstimatedTimeInput(
+                    title: "Estimated Time",
+                    value: $estimatedTimeValue,
+                    unit: $estimatedTimeUnit
+                )
 
                 tagPicker
             }
@@ -114,6 +142,7 @@ struct AddShortcutView: View {
                         tags: parsedTags,
                         estimatedTime: hasRecording ? formattedDurationText(recordingResult.recordedDuration) : manualEstimatedTime,
                         distance: formattedDistance(recordingResult.recordedDistance),
+                        routeStops: submittedRouteStops,
                         routePoints: recordingResult.routePoints,
                         photoMarkers: recordingResult.photoMarkers,
                         recordedDistance: recordingResult.recordedDistance,
@@ -259,6 +288,87 @@ struct AddShortcutView: View {
         }
     }
 
+    private var routeStopsEditor: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                withAnimation(.spring(response: 0.26, dampingFraction: 0.9)) {
+                    isRouteStopsExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Full Route Details")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Color.textPrimary)
+
+                        Text("Shown on the Route Detail screen.")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color.textSecondary.opacity(0.82))
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color.textSecondary)
+                        .rotationEffect(.degrees(isRouteStopsExpanded ? 180 : 0))
+                }
+            }
+            .buttonStyle(.plain)
+
+            if isRouteStopsExpanded {
+                VStack(spacing: 12) {
+                    Divider()
+                        .padding(.vertical, 12)
+
+                    FormTextField(title: "Start Detail", placeholder: "e.g. 1st floor", text: $startDetail)
+
+                    if isShowingViaStop {
+                        FormTextField(title: "Via", placeholder: "e.g. Student Union Elevator", text: $viaPoint)
+                        FormTextField(title: "Via Detail", placeholder: "e.g. 4th floor", text: $viaDetail)
+
+                        Button {
+                            withAnimation(.spring(response: 0.26, dampingFraction: 0.9)) {
+                                isShowingViaStop = false
+                                viaPoint = ""
+                                viaDetail = "2nd floor"
+                            }
+                        } label: {
+                            Label("Remove Via", systemImage: "minus.circle")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(Color.textSecondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        Button {
+                            withAnimation(.spring(response: 0.26, dampingFraction: 0.9)) {
+                                isShowingViaStop = true
+                            }
+                        } label: {
+                            Label("Add Via", systemImage: "plus.circle.fill")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(Color.primaryPurple)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    FormTextField(title: "Destination Detail", placeholder: "e.g. 2nd floor", text: $endDetail)
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(16)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.borderGray.opacity(0.85), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.035), radius: 10, y: 4)
+    }
+
     private var tagPicker: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Best For")
@@ -300,6 +410,11 @@ struct AddShortcutView: View {
             return "\(minutes) min"
         }
         return "\(minutes) min \(seconds) sec"
+    }
+
+    private func routeStopDetail(_ value: String, fallback: String) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? fallback : trimmed
     }
 }
 
@@ -343,6 +458,169 @@ private struct FormTextField: View {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .stroke(Color.borderGray, lineWidth: 1)
                 )
+        }
+    }
+}
+
+enum EstimatedTimeUnit: String, CaseIterable, Identifiable {
+    case minutes
+    case hours
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .minutes:
+            return "mins"
+        case .hours:
+            return "hours"
+        }
+    }
+
+    static func formattedDuration(value: String, unit: EstimatedTimeUnit) -> String {
+        let trimmedValue = normalizedInput(value)
+        guard trimmedValue.isEmpty == false else {
+            return unit == .minutes ? "5 mins" : "1 hour"
+        }
+
+        let numericValue = Double(trimmedValue) ?? 0
+        let displayValue = formattedNumber(numericValue)
+
+        switch unit {
+        case .minutes:
+            return "\(displayValue) \(numericValue == 1 ? "min" : "mins")"
+        case .hours:
+            return "\(displayValue) \(numericValue == 1 ? "hour" : "hours")"
+        }
+    }
+
+    static func parsed(_ text: String) -> (value: String, unit: EstimatedTimeUnit) {
+        let lowercasedText = text.lowercased()
+        let unit: EstimatedTimeUnit = lowercasedText.contains("hour") || lowercasedText.contains("hr")
+        ? .hours
+        : .minutes
+
+        let values = numbers(in: text)
+        guard let firstValue = values.first else {
+            return (unit == .minutes ? "05" : "1", unit)
+        }
+
+        if unit == .minutes,
+           lowercasedText.contains("sec"),
+           values.count > 1 {
+            return (formattedNumber(firstValue + values[1] / 60), unit)
+        }
+
+        return (formattedNumber(firstValue), unit)
+    }
+
+    static func convertedValue(_ value: String, from currentUnit: EstimatedTimeUnit, to nextUnit: EstimatedTimeUnit) -> String {
+        guard currentUnit != nextUnit else { return value }
+
+        let numericValue = Double(normalizedInput(value)) ?? 0
+        let convertedValue: Double
+
+        switch (currentUnit, nextUnit) {
+        case (.minutes, .hours):
+            convertedValue = numericValue / 60
+        case (.hours, .minutes):
+            convertedValue = numericValue * 60
+        default:
+            convertedValue = numericValue
+        }
+
+        return formattedNumber(convertedValue)
+    }
+
+    static func normalizedInput(_ text: String) -> String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ",", with: ".")
+    }
+
+    private static func numbers(in text: String) -> [Double] {
+        var values: [Double] = []
+        var number = ""
+
+        func appendCurrentNumber() {
+            guard number.isEmpty == false else { return }
+            values.append(Double(number) ?? 0)
+            number = ""
+        }
+
+        for character in text {
+            if character.isNumber || character == "." || character == "," {
+                number.append(character == "," ? "." : character)
+            } else {
+                appendCurrentNumber()
+            }
+        }
+
+        appendCurrentNumber()
+        return values
+    }
+
+    private static func formattedNumber(_ value: Double) -> String {
+        if value.rounded() == value {
+            return String(Int(value))
+        }
+
+        let formatter = NumberFormatter()
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 2
+        formatter.numberStyle = .decimal
+        return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.2f", value)
+    }
+}
+
+struct EstimatedTimeInput: View {
+    var title: String
+    @Binding var value: String
+    @Binding var unit: EstimatedTimeUnit
+
+    private var convertedUnit: Binding<EstimatedTimeUnit> {
+        Binding {
+            unit
+        } set: { nextUnit in
+            value = EstimatedTimeUnit.convertedValue(value, from: unit, to: nextUnit)
+            unit = nextUnit
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                Text(title)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.textSecondary)
+
+                Spacer()
+
+                Picker("Time Unit", selection: convertedUnit) {
+                    ForEach(EstimatedTimeUnit.allCases) { unit in
+                        Text(unit.label).tag(unit)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 148)
+            }
+
+            HStack(spacing: 10) {
+                TextField(unit == .minutes ? "05" : "1", text: $value)
+                    .font(.subheadline)
+                    .keyboardType(.decimalPad)
+
+                Text(unit.label)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.textSecondary)
+            }
+            .padding(.horizontal, 14)
+            .frame(height: 48)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.borderGray, lineWidth: 1)
+            )
         }
     }
 }

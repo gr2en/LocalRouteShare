@@ -32,6 +32,38 @@ final class AppViewModel: ObservableObject {
         shortcuts[index] = updatedShortcut
     }
 
+    func rateShortcut(shortcutID: UUID, score: Int) {
+        guard (1...5).contains(score),
+              let index = shortcuts.firstIndex(where: { $0.id == shortcutID }) else { return }
+
+        var updatedShortcut = shortcuts[index]
+        let previousRating = updatedShortcut.userRating
+        let currentTotal = updatedShortcut.rating * Double(updatedShortcut.ratingCount)
+
+        if previousRating == score {
+            let nextCount = max(0, updatedShortcut.ratingCount - 1)
+            let nextTotal = max(0, currentTotal - Double(score))
+
+            updatedShortcut.ratingCount = nextCount
+            updatedShortcut.rating = nextCount == 0 ? 0 : nextTotal / Double(nextCount)
+            updatedShortcut.userRating = nil
+        } else if let previousRating {
+            let nextTotal = currentTotal - Double(previousRating) + Double(score)
+
+            updatedShortcut.rating = updatedShortcut.ratingCount == 0 ? Double(score) : nextTotal / Double(updatedShortcut.ratingCount)
+            updatedShortcut.userRating = score
+        } else {
+            let nextCount = updatedShortcut.ratingCount + 1
+            let nextTotal = currentTotal + Double(score)
+
+            updatedShortcut.ratingCount = nextCount
+            updatedShortcut.rating = nextTotal / Double(nextCount)
+            updatedShortcut.userRating = score
+        }
+
+        shortcuts[index] = updatedShortcut
+    }
+
     func voteRouteProposal(routeID: UUID) {
         guard let index = routeProposals.firstIndex(where: { $0.id == routeID }) else { return }
         guard routeProposals[index].status == .voting, routeProposals[index].hasVoted == false else { return }
@@ -51,6 +83,7 @@ final class AppViewModel: ObservableObject {
         tags: [String],
         estimatedTime: String,
         distance: String,
+        routeStops: [RouteStop] = [],
         routePoints: [RoutePoint] = [],
         photoMarkers: [RoutePhotoMarker] = [],
         recordedDistance: Double = 0,
@@ -84,6 +117,7 @@ final class AppViewModel: ObservableObject {
             ratingCount: 0,
             saveCount: 0,
             isSaved: false,
+            routeStops: routeStops,
             routePoints: routePoints,
             photoMarkers: photoMarkers,
             recordedDistance: recordedDistance,
@@ -103,7 +137,8 @@ final class AppViewModel: ObservableObject {
         routeDescription: String,
         tags: [String],
         estimatedTime: String,
-        distance: String
+        distance: String,
+        routeStops: [RouteStop]
     ) {
         guard let index = shortcuts.firstIndex(where: { $0.id == shortcutID }) else { return }
         guard shortcuts[index].author == userProfile.nickname else { return }
@@ -129,6 +164,7 @@ final class AppViewModel: ObservableObject {
         shortcuts[index].tags = tags.isEmpty ? ["New Route"] : tags
         shortcuts[index].estimatedTime = trimmedTime
         shortcuts[index].distance = trimmedDistance
+        shortcuts[index].routeStops = routeStops
     }
 
     func deleteShortcut(shortcutID: UUID) {

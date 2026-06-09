@@ -15,6 +15,11 @@ enum SampleData {
             ratingCount: 89,
             saveCount: 342,
             isSaved: true,
+            routeStops: [
+                RouteStop(title: "Dormitory", detail: "1st floor"),
+                RouteStop(title: "Student Union Elevator", detail: "4th floor"),
+                RouteStop(title: "Engineering Shortcut", detail: "2nd floor")
+            ],
             routePoints: yonseiDormToEngineeringRoute,
             photoMarkers: [
                 RoutePhotoMarker(latitude: 37.5659, longitude: 126.9369, imageData: nil, imageName: "bridge-marker")
@@ -35,6 +40,11 @@ enum SampleData {
             ratingCount: 61,
             saveCount: 289,
             isSaved: true,
+            routeStops: [
+                RouteStop(title: "Library", detail: "1st floor"),
+                RouteStop(title: "Indoor Hallway", detail: "2nd floor"),
+                RouteStop(title: "Student Center", detail: "2nd floor")
+            ],
             routePoints: libraryToStudentHallRoute,
             photoMarkers: [
                 RoutePhotoMarker(latitude: 37.5647, longitude: 126.9381, imageData: nil, imageName: "indoor-marker")
@@ -55,6 +65,11 @@ enum SampleData {
             ratingCount: 44,
             saveCount: 176,
             isSaved: false,
+            routeStops: [
+                RouteStop(title: "Main Gate", detail: "Ground level"),
+                RouteStop(title: "Auditorium Path", detail: "Outdoor path"),
+                RouteStop(title: "Central Library", detail: "2nd floor")
+            ],
             routePoints: mainGateToLibraryRoute,
             photoMarkers: [
                 RoutePhotoMarker(latitude: 37.5652, longitude: 126.9374, imageData: nil, imageName: "morning-marker")
