@@ -1,0 +1,29 @@
+.DS_Store
+
+# Xcode personal workspace state
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+
+# Presentation, screenshots, and generated handoff artifacts
+/CODEX_HANDOFF.md
+/Screen Shots_20/
+/Screen Shots_20_FullPhone/
+/*.zip
+/*.docx
+/*.pdf
+/Local_Routes_UI_Feature_Annotations.pdf
+/Main_to_Shortcut_Presentation/
+/Phone_Frame_Output/
+/Presentation_Shortcut_Feature/
+/Route_Proposal_Voting_Presentation/
+/Route_Record_Demo/
+/Shortcut_Feature_PPT_Template/
+/Team_PPT_Screenshot_Guide/
+
+# One-off generation scripts used for class materials
+/encode_frames_to_mp4.swift
+/wrap_video_in_phone_frame.swift
+/make_*.py
+/make_*.js
+/make_*.swift
