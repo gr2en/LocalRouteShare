@@ -5,7 +5,6 @@ struct HomeView: View {
     @State private var destinationQuery = ""
     @State private var selectedTag = "All"
     @State private var homePath: [HomeDestination] = []
-    @State private var isShowingSmartRoute = false
     @State private var quickTags = ["Dorm", "Indoor"]
     @State private var isAddingTag = false
     @State private var draftTag = ""
@@ -14,25 +13,27 @@ struct HomeView: View {
     @FocusState private var isTagFieldFocused: Bool
 
     private var popularShortcuts: [Shortcut] {
-        Array(filteredShortcuts.sorted { $0.saveCount > $1.saveCount }.prefix(2))
+        Array(filteredShortcuts.sorted { $0.saveCount > $1.saveCount }.prefix(searchQuery.isEmpty ? 2 : 4))
     }
 
     private var filteredShortcuts: [Shortcut] {
-        guard selectedTag != "All" else { return viewModel.shortcuts }
-
-        return viewModel.shortcuts.filter { shortcut in
-            shortcut.title.localizedCaseInsensitiveContains(selectedTag)
-            || shortcut.startPoint.localizedCaseInsensitiveContains(selectedTag)
-            || shortcut.endPoint.localizedCaseInsensitiveContains(selectedTag)
-            || shortcut.routeDescription.localizedCaseInsensitiveContains(selectedTag)
-            || shortcut.tags.contains { tag in
-                tag.localizedCaseInsensitiveContains(selectedTag)
-            }
+        // Home search only shows real shortcuts that contain the user's keyword.
+        viewModel.shortcuts.filter { shortcut in
+            matchesSelectedTag(shortcut) && matchesShortcutSearch(shortcut)
         }
     }
 
+    private var filteredRoutes: [RouteProposal] {
+        // Route requests use the same keyword, so both home sections stay consistent.
+        viewModel.routeProposals.filter(matchesProposalSearch)
+    }
+
     private var popularRoutes: [RouteProposal] {
-        Array(viewModel.routeProposals.sorted { $0.voteCount > $1.voteCount }.prefix(2))
+        Array(filteredRoutes.sorted { $0.voteCount > $1.voteCount }.prefix(searchQuery.isEmpty ? 2 : 4))
+    }
+
+    private var searchQuery: String {
+        destinationQuery.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     var body: some View {
@@ -49,11 +50,15 @@ struct HomeView: View {
                         )
 
                         VStack(spacing: 12) {
-                            ForEach(popularShortcuts) { shortcut in
-                                NavigationLink(value: HomeDestination.shortcut(shortcut.id)) {
-                                    HomeShortcutSummaryCard(shortcut: shortcut)
+                            if popularShortcuts.isEmpty {
+                                HomeEmptyResultRow(title: "No matching shortcuts.")
+                            } else {
+                                ForEach(popularShortcuts) { shortcut in
+                                    NavigationLink(value: HomeDestination.shortcut(shortcut.id)) {
+                                        HomeShortcutSummaryCard(shortcut: shortcut)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
                             }
                         }
 
@@ -68,9 +73,13 @@ struct HomeView: View {
                         )
 
                         VStack(spacing: 14) {
-                            ForEach(popularRoutes) { proposal in
-                                HomeRouteRequestMiniCard(proposal: proposal) {
-                                    homePath.append(.routeRequest(proposal.id))
+                            if popularRoutes.isEmpty {
+                                HomeEmptyResultRow(title: "No matching route requests.")
+                            } else {
+                                ForEach(popularRoutes) { proposal in
+                                    HomeRouteRequestMiniCard(proposal: proposal) {
+                                        homePath.append(.routeRequest(proposal.id))
+                                    }
                                 }
                             }
                         }
@@ -92,9 +101,6 @@ struct HomeView: View {
                         .environmentObject(viewModel)
                 }
             }
-        }
-        .sheet(isPresented: $isShowingSmartRoute) {
-            SmartRouteView(destinationQuery: destinationQuery)
         }
     }
 
@@ -164,10 +170,7 @@ struct HomeView: View {
                 SearchBar(
                     text: $destinationQuery,
                     placeholder: "Search Destination",
-                    backgroundColor: Color.white,
-                    onSubmit: {
-                        isShowingSmartRoute = true
-                    }
+                    backgroundColor: Color.white
                 )
                     .frame(width: max(width - 32, 0), height: 52)
                     .position(x: width / 2, y: 214 + headerContentOffset)
@@ -274,6 +277,7 @@ struct HomeView: View {
         isAddingTag = false
         isTagFieldFocused = false
 
+        // After adding a tag, return the scroller to the first chip for a stable layout.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             withAnimation(.spring(response: 0.28, dampingFraction: 0.88)) {
                 if let firstTag = quickTags.first {
@@ -283,7 +287,43 @@ struct HomeView: View {
         }
     }
 
+    private func matchesSelectedTag(_ shortcut: Shortcut) -> Bool {
+        guard selectedTag != "All" else { return true }
+
+        return shortcut.title.localizedCaseInsensitiveContains(selectedTag)
+        || shortcut.startPoint.localizedCaseInsensitiveContains(selectedTag)
+        || shortcut.endPoint.localizedCaseInsensitiveContains(selectedTag)
+        || shortcut.routeDescription.localizedCaseInsensitiveContains(selectedTag)
+        || shortcut.tags.contains { tag in
+            tag.localizedCaseInsensitiveContains(selectedTag)
+        }
+    }
+
+    private func matchesShortcutSearch(_ shortcut: Shortcut) -> Bool {
+        guard searchQuery.isEmpty == false else { return true }
+
+        return shortcut.title.localizedCaseInsensitiveContains(searchQuery)
+        || shortcut.startPoint.localizedCaseInsensitiveContains(searchQuery)
+        || shortcut.endPoint.localizedCaseInsensitiveContains(searchQuery)
+        || shortcut.routeDescription.localizedCaseInsensitiveContains(searchQuery)
+        || shortcut.tags.contains { tag in
+            tag.localizedCaseInsensitiveContains(searchQuery)
+        }
+    }
+
+    private func matchesProposalSearch(_ proposal: RouteProposal) -> Bool {
+        guard searchQuery.isEmpty == false else { return true }
+
+        return proposal.startPoint.localizedCaseInsensitiveContains(searchQuery)
+        || proposal.endPoint.localizedCaseInsensitiveContains(searchQuery)
+        || proposal.reason.localizedCaseInsensitiveContains(searchQuery)
+        || proposal.expectedBenefits.contains { benefit in
+            benefit.localizedCaseInsensitiveContains(searchQuery)
+        }
+    }
+
     private func playMascotTapAnimation() {
+        // A short blink and wobble makes the mascot feel interactive without changing state.
         withAnimation(.easeInOut(duration: 0.07)) {
             isMascotBlinking = true
         }
@@ -483,22 +523,22 @@ private struct HomeRouteRequestMiniCard: View {
                 }
 
                 HStack(spacing: 12) {
-                    Label("2,847", systemImage: "hand.thumbsup")
+                    Label(proposal.voteCount.formatted(), systemImage: "hand.thumbsup")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(Color.primaryPurple)
 
-                    Label("156 supporters", systemImage: "person.2")
+                    Label("\(proposal.participantCount.formatted()) supporters", systemImage: "person.2")
                         .font(.system(size: 10))
                         .foregroundStyle(Color.textSecondary)
 
                     Spacer(minLength: 4)
 
-                    Text("Under Review")
+                    Text(proposal.status.displayText)
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(Color(hex: "#F59E0B"))
+                        .foregroundStyle(proposal.status.tintColor)
                         .padding(.horizontal, 10)
                         .frame(height: 22)
-                        .background(Color(hex: "#FEF9C2"))
+                        .background(proposal.status.tintColor.opacity(0.12))
                         .clipShape(Capsule())
                 }
             }
@@ -534,6 +574,25 @@ private struct HomeSectionTitle: View {
 
             Spacer()
         }
+    }
+}
+
+private struct HomeEmptyResultRow: View {
+    var title: String
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(Color.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .frame(height: 54)
+            .background(Color.white.opacity(0.86))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.lightGray, lineWidth: 1)
+            )
     }
 }
 
@@ -796,15 +855,32 @@ private struct SmartRouteStep: View {
 
 private extension Shortcut {
     var homeSummaryTitle: String {
-        "Muak Dorm → Eng. Hall"
+        if title.contains("→") || title.contains("->") {
+            return title
+                .replacingOccurrences(of: " -> ", with: " → ")
+                .replacingOccurrences(of: "->", with: "→")
+        }
+
+        return "\(startPoint) → \(endPoint)"
     }
 
     var homeSummaryAuthor: String {
-        "John Kim"
+        author
     }
 
     var homeSummaryTags: [String] {
-        ["Raining", "Indoor Routes", "Elevators"]
+        Array(tags.prefix(3)).map { tag in
+            switch tag {
+            case "Rainy Day":
+                return "Raining"
+            case "Indoor":
+                return "Indoor Routes"
+            case "Elevator":
+                return "Elevators"
+            default:
+                return tag
+            }
+        }
     }
 
     var compactEstimatedTime: String {
@@ -816,11 +892,11 @@ private extension Shortcut {
 
 private extension RouteProposal {
     var homeStartPoint: String {
-        "Yonsei Main..."
+        startPoint
     }
 
     var homeEndPoint: String {
-        "Sinchon stn. Exit3"
+        endPoint
     }
 
     var homeBadge: String {

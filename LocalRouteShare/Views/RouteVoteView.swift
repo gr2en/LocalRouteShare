@@ -331,8 +331,8 @@ struct RouteRequestDetailView: View {
             viewModel.voteRouteProposal(routeID: proposal.id)
         } label: {
             Label(
-                proposal.hasVoted ? "Voted(\(proposal.voteCount.formatted()))" : "Vote(\(proposal.voteCount.formatted()))",
-                systemImage: "hand.thumbsup"
+                proposal.hasVoted ? "Voted (\(proposal.voteCount.formatted()))" : "Vote (\(proposal.voteCount.formatted()))",
+                systemImage: proposal.hasVoted ? "hand.thumbsup.fill" : "hand.thumbsup"
             )
             .font(.system(size: 14, weight: .bold))
             .foregroundStyle(proposal.status == .voting && proposal.hasVoted == false ? Color.white : Color.textSecondary)
@@ -342,7 +342,7 @@ struct RouteRequestDetailView: View {
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
         .buttonStyle(.plain)
-        .disabled(proposal.status != .voting || proposal.hasVoted)
+        .disabled(proposal.status != .voting)
     }
 
     private func detailSection<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {

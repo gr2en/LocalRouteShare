@@ -14,7 +14,7 @@ enum SampleData {
             rating: 4.8,
             ratingCount: 89,
             saveCount: 342,
-            isSaved: true,
+            isSaved: false,
             routeStops: [
                 RouteStop(title: "Dormitory", detail: "1st floor"),
                 RouteStop(title: "Student Union Elevator", detail: "4th floor"),
@@ -39,7 +39,7 @@ enum SampleData {
             rating: 4.9,
             ratingCount: 61,
             saveCount: 289,
-            isSaved: true,
+            isSaved: false,
             routeStops: [
                 RouteStop(title: "Library", detail: "1st floor"),
                 RouteStop(title: "Indoor Hallway", detail: "2nd floor"),

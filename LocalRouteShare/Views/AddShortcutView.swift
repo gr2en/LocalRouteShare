@@ -35,6 +35,7 @@ struct AddShortcutView: View {
     }
 
     private var isValid: Bool {
+        // A route can be submitted either with GPS recording or a manual description.
         let hasRequiredRouteInput = hasRecording
         || routeDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
 
@@ -45,10 +46,7 @@ struct AddShortcutView: View {
 
     private var submittedDescription: String {
         let trimmedDescription = routeDescription.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedTips = localTips.trimmingCharacters(in: .whitespacesAndNewlines)
-        let description = trimmedDescription.isEmpty ? "Recorded route with photo markers." : trimmedDescription
-        guard trimmedTips.isEmpty == false else { return description }
-        return "\(description)\nTip: \(trimmedTips)"
+        return trimmedDescription.isEmpty ? "Recorded route with photo markers." : trimmedDescription
     }
 
     private var submittedRouteStops: [RouteStop] {
@@ -56,6 +54,7 @@ struct AddShortcutView: View {
         let trimmedVia = viaPoint.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedEnd = endPoint.trimmingCharacters(in: .whitespacesAndNewlines)
 
+        // Start and destination are required; the via stop is added only when the user opens it.
         var stops = [
             RouteStop(title: trimmedStart, detail: routeStopDetail(startDetail, fallback: "Start"))
         ]
@@ -139,6 +138,7 @@ struct AddShortcutView: View {
                         startPoint: startPoint,
                         endPoint: endPoint,
                         routeDescription: submittedDescription,
+                        localTips: localTips,
                         tags: parsedTags,
                         estimatedTime: hasRecording ? formattedDurationText(recordingResult.recordedDuration) : manualEstimatedTime,
                         distance: formattedDistance(recordingResult.recordedDistance),
@@ -155,6 +155,7 @@ struct AddShortcutView: View {
             }
         }
         .fullScreenCover(isPresented: $isShowingRecording) {
+            // The recording screen returns GPS points and photo markers after the user finishes.
             RecordingMapView { result in
                 recordingResult = result
             }
@@ -183,6 +184,7 @@ struct AddShortcutView: View {
             .frame(maxWidth: .infinity)
 
             if hasRecording {
+                // Preview the recorded route before saving it to the shared shortcut list.
                 RouteMapView(
                     routePoints: recordingResult.routePoints,
                     photoMarkers: recordingResult.photoMarkers,

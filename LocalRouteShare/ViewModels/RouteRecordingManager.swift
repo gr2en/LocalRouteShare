@@ -18,6 +18,7 @@ final class RouteRecordingManager: NSObject, ObservableObject {
     override init() {
         super.init()
         locationManager.delegate = self
+        // A short distance filter keeps the route line smooth without saving too many points.
         locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
         locationManager.distanceFilter = 5
         locationManager.activityType = .fitness
@@ -29,6 +30,7 @@ final class RouteRecordingManager: NSObject, ObservableObject {
     var totalDistance: Double {
         guard routePoints.count > 1 else { return 0 }
 
+        // Sum each pair of neighboring GPS points to estimate the recorded route length.
         return zip(routePoints, routePoints.dropFirst()).reduce(0) { partialResult, pair in
             let previous = CLLocation(latitude: pair.0.latitude, longitude: pair.0.longitude)
             let next = CLLocation(latitude: pair.1.latitude, longitude: pair.1.longitude)
@@ -43,6 +45,7 @@ final class RouteRecordingManager: NSObject, ObservableObject {
     func startRecording() {
         switch authorizationStatus {
         case .notDetermined:
+            // If permission is granted later, recording starts automatically.
             shouldStartAfterPermission = true
             requestPermission()
         case .authorizedAlways, .authorizedWhenInUse:
@@ -65,6 +68,7 @@ final class RouteRecordingManager: NSObject, ObservableObject {
     }
 
     func addPhotoMarker(imageData: Data?, memo: String? = nil) {
+        // Prefer the live GPS coordinate, but fall back to the last recorded route point.
         guard let coordinate = currentLocation?.coordinate ?? routePoints.last.map({
             CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
         }) else {
@@ -111,6 +115,7 @@ final class RouteRecordingManager: NSObject, ObservableObject {
 
         isRecording = true
         statusMessage = "Recording the route with outdoor GPS signals."
+        // CoreLocation will now call didUpdateLocations whenever a new point is available.
         locationManager.startUpdatingLocation()
         startTimer()
     }
@@ -154,6 +159,7 @@ extension RouteRecordingManager: CLLocationManagerDelegate {
         guard let location = locations.last else { return }
         guard location.horizontalAccuracy >= 0 else { return }
 
+        // Skip weak GPS samples so the saved route does not jump around on the map.
         if location.horizontalAccuracy > 25 {
             statusMessage = "GPS accuracy is low, so this point was skipped."
             return
@@ -174,6 +180,7 @@ extension RouteRecordingManager: CLLocationManagerDelegate {
             return
         }
 
+        // Save a new point only after enough movement to avoid duplicate markers.
         let previousLocation = CLLocation(latitude: lastPoint.latitude, longitude: lastPoint.longitude)
         if location.distance(from: previousLocation) >= 5 {
             routePoints.append(newPoint)

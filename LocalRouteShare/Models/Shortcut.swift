@@ -7,6 +7,7 @@ struct Shortcut: Identifiable, Equatable {
     var startPoint: String
     var endPoint: String
     var routeDescription: String
+    var localTips: String
     var tags: [String]
     var estimatedTime: String
     var distance: String
@@ -28,6 +29,7 @@ struct Shortcut: Identifiable, Equatable {
         startPoint: String,
         endPoint: String,
         routeDescription: String,
+        localTips: String = "",
         tags: [String],
         estimatedTime: String,
         distance: String,
@@ -48,6 +50,7 @@ struct Shortcut: Identifiable, Equatable {
         self.startPoint = startPoint
         self.endPoint = endPoint
         self.routeDescription = routeDescription
+        self.localTips = localTips
         self.tags = tags
         self.estimatedTime = estimatedTime
         self.distance = distance
@@ -65,6 +68,20 @@ struct Shortcut: Identifiable, Equatable {
 }
 
 extension Shortcut {
+    var displayLocalTips: String {
+        let trimmedTips = localTips.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedTips.isEmpty == false {
+            return trimmedTips
+        }
+
+        if let legacyTipRange = routeDescription.range(of: "\nTip:", options: .caseInsensitive) {
+            return routeDescription[legacyTipRange.upperBound...]
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        return ""
+    }
+
     var displayRouteStops: [RouteStop] {
         let cleanedStops = routeStops
             .map { stop in

@@ -27,7 +27,7 @@ struct RouteProposalCard: View {
     }
 
     private var isVoteDisabled: Bool {
-        proposal.status != .voting || proposal.hasVoted
+        proposal.status != .voting
     }
 
     var body: some View {
@@ -87,20 +87,12 @@ struct RouteProposalCard: View {
             }
 
             Button(action: onVote) {
-                Label(buttonTitle, systemImage: proposal.status == .operating ? "checkmark.seal.fill" : "hand.thumbsup")
+                Label(buttonTitle, systemImage: proposalButtonIcon)
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(isVoteDisabled ? Color.textSecondary : Color.white)
+                    .foregroundStyle(buttonTextColor)
                     .frame(maxWidth: .infinity)
                     .frame(height: 38)
-                    .background(
-                        Group {
-                            if isVoteDisabled {
-                                Color.lightGray
-                            } else {
-                                Color.primaryPurple
-                            }
-                        }
-                    )
+                    .background(buttonBackgroundColor)
                     .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
             }
             .buttonStyle(.plain)
@@ -114,6 +106,27 @@ struct RouteProposalCard: View {
                 .stroke(Color.borderGray.opacity(0.9), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.05), radius: 6, y: 2)
+    }
+
+    private var proposalButtonIcon: String {
+        if proposal.status == .operating {
+            return "checkmark.seal.fill"
+        }
+        return proposal.hasVoted ? "hand.thumbsup.fill" : "hand.thumbsup"
+    }
+
+    private var buttonTextColor: Color {
+        if proposal.status == .voting && proposal.hasVoted == false {
+            return .white
+        }
+        return Color.textSecondary
+    }
+
+    private var buttonBackgroundColor: Color {
+        if proposal.status == .voting && proposal.hasVoted == false {
+            return Color.primaryPurple
+        }
+        return Color.lightGray
     }
 }
 

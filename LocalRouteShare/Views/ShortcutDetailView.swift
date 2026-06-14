@@ -7,6 +7,10 @@ struct ShortcutDetailView: View {
 
     @State private var isShowingEdit = false
     @State private var isConfirmingDelete = false
+    @State private var isShowingStartRouteNotice = false
+    @State private var ratingFeedbackMessage: String?
+    @State private var ratingFeedbackScale = 1.0
+    @State private var ratingMascotScale = 1.0
 
     let shortcutID: UUID
 
@@ -73,6 +77,11 @@ struct ShortcutDetailView: View {
             }
         } message: {
             Text("This removes the shortcut from your shared routes. The action cannot be undone.")
+        }
+        .alert("Coming Soon", isPresented: $isShowingStartRouteNotice) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("This feature will be coming soon.")
         }
     }
 
@@ -211,14 +220,16 @@ struct ShortcutDetailView: View {
     }
 
     private func localTipsSection(for shortcut: Shortcut) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let tips = shortcut.displayLocalTips
+
+        return VStack(alignment: .leading, spacing: 10) {
             Text("Local Tips")
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
 
-            Text("A bit longer, but much more comfortable on hot days. Avoid the hills and use elevators instead.")
+            Text(tips.isEmpty ? "No local tips added yet." : tips)
                 .font(.system(size: 12))
-                .foregroundStyle(Color.textSecondary)
+                .foregroundStyle(tips.isEmpty ? Color.textSecondary.opacity(0.72) : Color.textSecondary)
                 .lineSpacing(3)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -246,21 +257,24 @@ struct ShortcutDetailView: View {
                     .antialiased(true)
                     .scaledToFit()
                     .frame(width: 70, height: 78)
+                    .scaleEffect(ratingMascotScale)
 
-                Text("Rate This Route!")
+                Text(ratingBubbleText(for: shortcut))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Color.textSecondary)
                     .padding(.horizontal, 14)
                     .frame(height: 36)
                     .background(Color.lightGray)
                     .clipShape(Capsule())
+                    .scaleEffect(ratingFeedbackScale)
+                    .animation(.spring(response: 0.24, dampingFraction: 0.72), value: ratingFeedbackMessage)
             }
             .frame(maxWidth: .infinity, alignment: .center)
 
             HStack(spacing: 16) {
                 ForEach(1...5, id: \.self) { score in
                     Button {
-                        viewModel.rateShortcut(shortcutID: shortcut.id, score: score)
+                        handleRatingTap(score: score, shortcutID: shortcut.id)
                     } label: {
                         Image(systemName: score <= (shortcut.userRating ?? 0) ? "star.fill" : "star")
                             .font(.system(size: 20, weight: .medium))
@@ -304,6 +318,8 @@ struct ShortcutDetailView: View {
 
     private func saveButton(for shortcut: Shortcut) -> some View {
         Button {
+            // Route navigation is reserved for a later version, so the button gives feedback now.
+            isShowingStartRouteNotice = true
         } label: {
             Label(
                 "Start Route",
@@ -317,6 +333,28 @@ struct ShortcutDetailView: View {
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
         .buttonStyle(.plain)
+    }
+
+    private func ratingBubbleText(for shortcut: Shortcut) -> String {
+        ratingFeedbackMessage ?? (shortcut.userRating == nil ? "Rate This Route!" : "Thanks for the rating!")
+    }
+
+    private func handleRatingTap(score: Int, shortcutID: UUID) {
+        viewModel.rateShortcut(shortcutID: shortcutID, score: score)
+
+        // Give immediate visual feedback after the user leaves a rating.
+        withAnimation(.spring(response: 0.22, dampingFraction: 0.62)) {
+            ratingFeedbackMessage = "Thanks for the rating!"
+            ratingFeedbackScale = 1.08
+            ratingMascotScale = 1.08
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+            withAnimation(.spring(response: 0.24, dampingFraction: 0.78)) {
+                ratingFeedbackScale = 1.0
+                ratingMascotScale = 1.0
+            }
+        }
     }
 
     private var missingShortcutState: some View {

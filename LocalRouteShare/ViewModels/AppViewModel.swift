@@ -1,6 +1,7 @@
 import Foundation
 
 final class AppViewModel: ObservableObject {
+    // These published values are the shared app state used by all tabs.
     @Published var shortcuts: [Shortcut]
     @Published var routeProposals: [RouteProposal]
     @Published var userProfile: UserProfile
@@ -21,6 +22,7 @@ final class AppViewModel: ObservableObject {
         var updatedShortcut = shortcuts[index]
         updatedShortcut.isSaved.toggle()
 
+        // Keep the visible like count and the profile summary in sync.
         if updatedShortcut.isSaved {
             updatedShortcut.saveCount += 1
             userProfile.receivedLikes += 1
@@ -40,6 +42,7 @@ final class AppViewModel: ObservableObject {
         let previousRating = updatedShortcut.userRating
         let currentTotal = updatedShortcut.rating * Double(updatedShortcut.ratingCount)
 
+        // Recalculate the average rating without storing every user's score.
         if previousRating == score {
             let nextCount = max(0, updatedShortcut.ratingCount - 1)
             let nextTotal = max(0, currentTotal - Double(score))
@@ -66,20 +69,31 @@ final class AppViewModel: ObservableObject {
 
     func voteRouteProposal(routeID: UUID) {
         guard let index = routeProposals.firstIndex(where: { $0.id == routeID }) else { return }
-        guard routeProposals[index].status == .voting, routeProposals[index].hasVoted == false else { return }
+        guard routeProposals[index].status == .voting else { return }
 
-        routeProposals[index].voteCount += 1
-        routeProposals[index].participantCount += 1
-        routeProposals[index].hasVoted = true
-        userProfile.votedRouteCount += 1
-        userProfile.localScore += 3
-        userProfile.weeklyIncrease += 3
+        // Voting is reversible, so a second tap restores the previous state.
+        if routeProposals[index].hasVoted {
+            routeProposals[index].voteCount = max(0, routeProposals[index].voteCount - 1)
+            routeProposals[index].participantCount = max(0, routeProposals[index].participantCount - 1)
+            routeProposals[index].hasVoted = false
+            userProfile.votedRouteCount = max(0, userProfile.votedRouteCount - 1)
+            userProfile.localScore = max(0, userProfile.localScore - 3)
+            userProfile.weeklyIncrease = max(0, userProfile.weeklyIncrease - 3)
+        } else {
+            routeProposals[index].voteCount += 1
+            routeProposals[index].participantCount += 1
+            routeProposals[index].hasVoted = true
+            userProfile.votedRouteCount += 1
+            userProfile.localScore += 3
+            userProfile.weeklyIncrease += 3
+        }
     }
 
     func addShortcut(
         startPoint: String,
         endPoint: String,
         routeDescription: String,
+        localTips: String = "",
         tags: [String],
         estimatedTime: String,
         distance: String,
@@ -92,6 +106,7 @@ final class AppViewModel: ObservableObject {
         let trimmedStart = startPoint.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedEnd = endPoint.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedDescription = routeDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedTips = localTips.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedTime = estimatedTime.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedDistance = distance.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -103,6 +118,7 @@ final class AppViewModel: ObservableObject {
             return
         }
 
+        // The new shortcut is inserted first so the "All" list behaves like a recent feed.
         // When Firebase is added, store createdAt, authorID, and related fields in the shortcuts collection.
         let shortcut = Shortcut(
             title: "\(trimmedStart) → \(trimmedEnd)",
@@ -110,6 +126,7 @@ final class AppViewModel: ObservableObject {
             startPoint: trimmedStart,
             endPoint: trimmedEnd,
             routeDescription: trimmedDescription,
+            localTips: trimmedTips,
             tags: tags.isEmpty ? ["New Route"] : tags,
             estimatedTime: trimmedTime,
             distance: trimmedDistance,
@@ -135,6 +152,7 @@ final class AppViewModel: ObservableObject {
         startPoint: String,
         endPoint: String,
         routeDescription: String,
+        localTips: String? = nil,
         tags: [String],
         estimatedTime: String,
         distance: String,
@@ -161,6 +179,9 @@ final class AppViewModel: ObservableObject {
         shortcuts[index].startPoint = trimmedStart
         shortcuts[index].endPoint = trimmedEnd
         shortcuts[index].routeDescription = trimmedDescription
+        if let localTips {
+            shortcuts[index].localTips = localTips.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
         shortcuts[index].tags = tags.isEmpty ? ["New Route"] : tags
         shortcuts[index].estimatedTime = trimmedTime
         shortcuts[index].distance = trimmedDistance
@@ -197,6 +218,7 @@ final class AppViewModel: ObservableObject {
             return
         }
 
+        // New proposals always start in the voting stage.
         // When Firebase is added, store status, createdAt, and proposerID in the routeProposals collection.
         let proposal = RouteProposal(
             startPoint: trimmedStart,

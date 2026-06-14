@@ -20,6 +20,7 @@ struct RouteMapView: UIViewRepresentable {
     }
 
     func updateUIView(_ mapView: MKMapView, context: Context) {
+        // Redraw the overlays each time SwiftUI sends updated route data.
         mapView.removeOverlays(mapView.overlays)
         mapView.removeAnnotations(mapView.annotations)
 
@@ -27,11 +28,13 @@ struct RouteMapView: UIViewRepresentable {
             CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
         }
 
+        // The recorded GPS points are displayed as one continuous route line.
         if coordinates.count > 1 {
             let polyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
             mapView.addOverlay(polyline)
         }
 
+        // Photo markers are shown as map annotations so users can remember key places.
         for marker in photoMarkers {
             let annotation = PhotoMarkerAnnotation(
                 coordinate: CLLocationCoordinate2D(latitude: marker.latitude, longitude: marker.longitude),
@@ -67,6 +70,7 @@ struct RouteMapView: UIViewRepresentable {
 
     private func updateVisibleRegion(on mapView: MKMapView, coordinates: [CLLocationCoordinate2D]) {
         if followsCurrentLocation, let currentLocation {
+            // Recording mode keeps the map centered on the user's latest position.
             let region = MKCoordinateRegion(
                 center: currentLocation,
                 span: MKCoordinateSpan(latitudeDelta: 0.004, longitudeDelta: 0.004)
@@ -91,6 +95,7 @@ struct RouteMapView: UIViewRepresentable {
 
         guard visibleCoordinates.count > 1 else { return }
 
+        // Fit the map to every route point and marker instead of using a fixed zoom.
         let mapPoints = visibleCoordinates.map(MKMapPoint.init)
         let rect = mapPoints.reduce(MKMapRect.null) { partialResult, point in
             let pointRect = MKMapRect(x: point.x, y: point.y, width: 1, height: 1)
@@ -111,6 +116,7 @@ struct RouteMapView: UIViewRepresentable {
             }
 
             let renderer = MKPolylineRenderer(polyline: polyline)
+            // Use the app's purple color to make user-recorded routes easy to recognize.
             renderer.strokeColor = UIColor(red: 0.38, green: 0.33, blue: 0.96, alpha: 1)
             renderer.lineWidth = 6
             renderer.lineJoin = .round
